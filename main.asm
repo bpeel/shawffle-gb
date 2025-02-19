@@ -36,6 +36,8 @@ DEF BYTES_PER_PUZZLE EQU 48
 
 DEF TILES_PER_PUZZLE EQU 5 * 3 + 3 * 2
 
+DEF FIRST_LETTER_TILE EQU 7
+
 SECTION "Code", ROM0
 
 Init:
@@ -202,6 +204,23 @@ CopyScreenMap:
         inc h
 :       dec b
         jr nz, .line
+        ret
+
+ExtractPuzzleTiles:
+        ld hl, $8000 + FIRST_LETTER_TILE * 16
+        ld c, TILES_PER_PUZZLE
+        ld de, PuzzleLetters
+.loop:
+        ld a, [de]
+        inc de
+        ld b, a
+        push bc
+        push de
+        call ExtractLetterTiles
+        pop de
+        pop bc
+        dec c
+        jr nz, .loop
         ret
 
 ExtractLetterTiles:
