@@ -57,6 +57,16 @@ Init:
         ld [ScrollY], a
         ldh [rSCY], a
 
+        ld hl, $8800
+        ld b, $0
+        call ExtractLetterTiles
+        ld b, $1
+        call ExtractLetterTiles
+        ld b, $2
+        call ExtractLetterTiles
+        ld b, 47
+        call ExtractLetterTiles
+
         ;; Clear any pending interrupts
         xor a, a
         ldh [rIF], a
@@ -124,6 +134,56 @@ MemCpy:
 	or a, c
 	jr nz, MemCpy
         ret
+
+ExtractLetterTiles:
+        ;; b = tile to extract
+        ;; hl = address to store tile
+        ;; leaves hl pointing at next tile
+        ;; corrupts de, a and b
+        ld d, 0
+        ld a, b
+        ;; da = b * 32
+        REPT 5
+        sla a
+        rl d
+        ENDR
+        ;; multiply b by 16 into eb
+        ld e, 0
+        REPT 4
+        sla b
+        rl e
+        ENDR
+        ;; add eb to da to get da = b * 48
+        add a, b
+        jr nc, :+
+        inc d
+:
+        add a, LOW(LetterTiles)
+        jr nc, :+
+        inc d
+:
+
+        ld b, e
+        ld e, a
+        ld a, b
+        add a, d
+
+        add a, HIGH(LetterTiles)
+        ld d, a
+
+        ld b, 8 * 6
+        select_bank LetterTiles
+.loop:
+        ld a, $ff
+        ld [hli], a
+        ld a, [de]
+        ld [hli], a
+        inc de
+        dec b
+        jr nz, .loop
+
+        ret
+
 
 SECTION "Variables", WRAM0
 VblankOccured: db
