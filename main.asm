@@ -110,14 +110,10 @@ Init:
         ld hl, $8000
         call MemCpy
 
-        ld b, $0
-        call ExtractLetterTiles
-        ld b, $1
-        call ExtractLetterTiles
-        ld b, $2
-        call ExtractLetterTiles
-        ld b, 47
-        call ExtractLetterTiles
+        ld bc, 0
+        call LoadPuzzle
+        call ExtractPuzzleTiles
+        call PositionTiles
 
         ;; Clear any pending interrupts
         xor a, a
