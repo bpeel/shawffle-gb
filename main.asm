@@ -38,6 +38,10 @@ DEF TILES_PER_PUZZLE EQU 5 * 3 + 3 * 2
 
 DEF FIRST_LETTER_TILE EQU 7
 
+DEF TILE_INCORRECT EQU 0
+DEF TILE_WRONG_POS EQU 1
+DEF TILE_CORRECT EQU 2
+
 SECTION "Code", ROM0
 
 Init:
@@ -114,6 +118,7 @@ Init:
         call LoadPuzzle
         call ExtractPuzzleTiles
         call PositionTiles
+        call InitTileStates
 
         ;; Clear any pending interrupts
         xor a, a
@@ -391,13 +396,43 @@ PositionTiles:
         jr nz, .loop
         ret
 
+InitTileStates:
+        ld de, TileStates
+        ld bc, TilePositions
+        ld h, HIGH(PuzzleLetters)
+.loop:
+        ld a, [bc]
+        inc c
+        add a, LOW(PuzzleLetters)
+        ld l, a
+        ld a, [hl]
+        push af
+        ld a, e
+        sub a, TileStates - PuzzleLetters
+        ld l, a
+        ld l, [hl]
+        pop af
+        cp a, l
+        ld a, TILE_CORRECT
+        jr z, :+
+        ld a, TILE_INCORRECT
+:       ld [de], a
+        inc e
+        ld a, e
+        cp a, LOW(TileStates) + TILES_PER_PUZZLE
+        jr c, .loop
+        ret
+
 SECTION "Variables", WRAM0
 VblankOccured: db
 FrameCount:      db
 ScrollX:         db
 ScrollY:         db
+
+SECTION "GameState", WRAM0, ALIGN[BITWIDTH(TILES_PER_PUZZLE * 3 - 1)]
 PuzzleLetters:  ds TILES_PER_PUZZLE
 TilePositions:  ds TILES_PER_PUZZLE
+TileStates:      ds TILES_PER_PUZZLE
 
 SECTION "OamMirror", WRAM0, ALIGN[8]
 OamMirror:
