@@ -10,7 +10,7 @@ import cairo
 FIRST_LETTER = ord("𐑐")
 N_LETTERS = 48
 
-LETTER_WIDTH = 16
+LETTER_WIDTH = 8
 LETTER_HEIGHT = 24
 
 surface = cairo.ImageSurface(cairo.FORMAT_RGB24,

@@ -142,18 +142,18 @@ ExtractLetterTiles:
         ;; corrupts de, a and b
         ld d, 0
         ld a, b
-        ;; da = b * 32
-        REPT 5
+        ;; da = b * 16
+        REPT 4
         sla a
         rl d
         ENDR
-        ;; multiply b by 16 into eb
+        ;; multiply b by 8 into eb
         ld e, 0
-        REPT 4
+        REPT 3
         sla b
         rl e
         ENDR
-        ;; add eb to da to get da = b * 48
+        ;; add eb to da to get da = b * 24
         add a, b
         jr nc, :+
         inc d
@@ -171,7 +171,7 @@ ExtractLetterTiles:
         add a, HIGH(LetterTiles)
         ld d, a
 
-        ld b, 8 * 6
+        ld b, 8 * 3
         select_bank LetterTiles
 .loop:
         ld a, $ff
