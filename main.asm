@@ -68,10 +68,24 @@ Init:
         dec b
         jr nz, :-
 
+        select_bank TileMap
+        xor a, a
+        ldh [rVBK], a
+        ld de, TileMap
+        ld hl, _SCRN0
+        call CopyScreenMap
+        ld a, 1
+        ldh [rVBK], a
+        ld de, TileMapAttribs
+        ld hl, _SCRN0
+        call CopyScreenMap
+
         select_bank TileTiles
+        xor a, a
+        ldh [rVBK], a
         ld de, TileTiles
         ld bc, TileTiles.end - TileTiles
-        ld hl, $8800
+        ld hl, $8000
         call MemCpy
 
         ld b, $0
@@ -93,7 +107,7 @@ Init:
         ei
 
         ; Enable the LCD
-        ld a, LCDCF_ON | LCDCF_BG8800 | LCDCF_OBJON | LCDCF_OBJ8
+        ld a, LCDCF_ON | LCDCF_BG8000 | LCDCF_OBJON | LCDCF_OBJ8
         ldh [rLCDC], a
 
 MainLoop:
@@ -149,6 +163,25 @@ MemCpy:
 	ld a, b
 	or a, c
 	jr nz, MemCpy
+        ret
+
+CopyScreenMap:
+        ld b, 144 / 8
+.line:
+        ld c, 160 / 8
+.tile:
+        ld a, [de]
+        ld [hli], a
+        inc de
+        dec c
+        jr nz, .tile
+        ld a, (256 - 160) / 8
+        add a, l
+        ld l, a
+        jr nc, :+
+        inc h
+:       dec b
+        jr nz, .line
         ret
 
 ExtractLetterTiles:

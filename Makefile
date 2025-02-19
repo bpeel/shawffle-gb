@@ -1,5 +1,6 @@
 OBJS = \
-	main.o
+	main.o \
+	tilemap.o
 TILE_FILES = \
 	tile-tiles.bin \
 	tile-palettes.bin \
