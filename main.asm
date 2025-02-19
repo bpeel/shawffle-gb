@@ -16,6 +16,10 @@ MACRO select_bank
         ld [$2000], a
 ENDM
 
+        ;; Offset from TileTiles to the three tiles that form the
+        ;; background of a letter
+DEF LETTER_TEMPLATE_OFFSET EQU 16 * 4
+
 SECTION "Code", ROM0
 
 Init:
@@ -189,6 +193,19 @@ ExtractLetterTiles:
         ;; hl = address to store tile
         ;; leaves hl pointing at next tile
         ;; corrupts de, a and b
+
+        ;; copy the template into the tile
+        push hl
+        select_bank TileTiles
+        ld de, TileTiles + LETTER_TEMPLATE_OFFSET
+        ld c, 16 * 3
+:       ld a, [de]
+        ld [hli], a
+        inc de
+        dec c
+        jr nz, :-
+        pop hl
+
         ld d, 0
         ld a, b
         ;; da = b * 16
@@ -223,10 +240,11 @@ ExtractLetterTiles:
         ld b, 8 * 3
         select_bank LetterTiles
 .loop:
-        ld a, $ff
-        ld [hli], a
+        REPT 2
         ld a, [de]
+        or a, [hl]
         ld [hli], a
+        ENDR
         inc de
         dec b
         jr nz, .loop
