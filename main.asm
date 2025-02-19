@@ -16,12 +16,25 @@ MACRO select_bank
         ld [$2000], a
 ENDM
 
+MACRO add_constant_to_de
+        ld a, LOW(\1)
+        add a, e
+        ld e, a
+        jr nc, :+
+        inc d
+:       ld a, d
+        add a, HIGH(\1)
+        ld d, a
+ENDM
+
         ;; Offset from TileTiles to the three tiles that form the
         ;; background of a letter
 DEF LETTER_TEMPLATE_OFFSET EQU 16 * 4
 
 DEF PUZZLES_PER_BANK EQU 341
 DEF BYTES_PER_PUZZLE EQU 48
+
+DEF TILES_PER_PUZZLE EQU 5 * 3 + 3 * 2
 
 SECTION "Code", ROM0
 
@@ -254,12 +267,63 @@ ExtractLetterTiles:
 
         ret
 
+LoadPuzzle:
+        ;; Fills PuzzleLetters and TilePositions with the puzzle data
+        ;; bc = puzzle number
+        ;; get puzzle number * 48 into de (= num * 32 + num * 16)
+        ld d, b
+        ld e, c
+        ;; de = bc * 32
+        REPT 5
+        sla e
+        rl d
+        ENDR
+        ld h, b
+        ld a, c
+        ;; ha = b * 16
+        REPT 4
+        sla a
+        rl h
+        ENDR
+        add a, e
+        jr nc, :+
+        inc h
+:       ld e, a
+        ld a, d
+        add h
+        ld d, a
+
+        ld a, b
+        and a, a
+        jr z, .first_bank
+        ld a, c
+        cp a, LOW(PUZZLES_PER_BANK)
+        jr nc, .second_bank
+.first_bank:
+        select_bank Puzzles
+        add_constant_to_de Puzzles
+        jr .got_addr
+.second_bank:
+        select_bank Puzzles2
+        add_constant_to_de Puzzles2 - PUZZLES_PER_BANK * BYTES_PER_PUZZLE
+.got_addr:
+        ld hl, PuzzleLetters
+        assert TilePositions == PuzzleLetters + TILES_PER_PUZZLE
+        ld c, TILES_PER_PUZZLE * 2
+:       ld a, [de]
+        ld [hli], a
+        inc de
+        dec c
+        jr nz, :-
+        ret
 
 SECTION "Variables", WRAM0
 VblankOccured: db
 FrameCount:      db
 ScrollX:         db
-ScrollY:         db       
+ScrollY:         db
+PuzzleLetters:  ds TILES_PER_PUZZLE
+TilePositions:  ds TILES_PER_PUZZLE
 
 SECTION "OamMirror", WRAM0, ALIGN[8]
 OamMirror:
