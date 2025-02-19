@@ -20,6 +20,9 @@ ENDM
         ;; background of a letter
 DEF LETTER_TEMPLATE_OFFSET EQU 16 * 4
 
+DEF PUZZLES_PER_BANK EQU 341
+DEF BYTES_PER_PUZZLE EQU 48
+
 SECTION "Code", ROM0
 
 Init:
@@ -278,3 +281,11 @@ SECTION "TilePalettes", ROMX
 TilePalettes:
         incbin "tile-palettes.bin"
 .end:
+
+SECTION "Puzzles", ROMX
+Puzzles:
+        incbin "puzzles.bin", 0, PUZZLES_PER_BANK * BYTES_PER_PUZZLE
+
+SECTION "Puzzles2", ROMX
+Puzzles2:
+        incbin "puzzles.bin", PUZZLES_PER_BANK * BYTES_PER_PUZZLE

@@ -18,7 +18,7 @@ shawffle.gb: $(OBJS)
 clean:
 	rm -f $(OBJS) shawffle.gb $(TILE_FILES)
 
-main.o: letter-tiles.bin $(TILE_FILES)
+main.o: letter-tiles.bin $(TILE_FILES) puzzles.bin
 
 letter-tiles.bin: letter-tiles.png make-binary-letter-tiles.py
 	./make-binary-letter-tiles.py letter-tiles.png letter-tiles.bin
