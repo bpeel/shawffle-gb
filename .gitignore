@@ -1,0 +1,4 @@
+*.o
+/shawffle.gb
+/shawffle-symbols.txt
+/letter-tiles.bin
