@@ -57,7 +57,23 @@ Init:
         ld [ScrollY], a
         ldh [rSCY], a
 
+        ;; Set up the bg palette
+        select_bank TilePalettes
+        ld a, BCPSF_AUTOINC
+        ldh [rBCPS], a
+        ld b, TilePalettes.end - TilePalettes
+        ld hl, TilePalettes
+:       ld a, [hli]
+        ldh [rBCPD], a
+        dec b
+        jr nz, :-
+
+        select_bank TileTiles
+        ld de, TileTiles
+        ld bc, TileTiles.end - TileTiles
         ld hl, $8800
+        call MemCpy
+
         ld b, $0
         call ExtractLetterTiles
         ld b, $1
@@ -199,3 +215,15 @@ OamMirror:
 SECTION "LetterTiles", ROMX
 LetterTiles:
         incbin "letter-tiles.bin"
+
+SECTION "TileTiles", ROMX
+TileTiles:
+        ;; first tile empty
+        ds 16, $00
+        incbin "tile-tiles.bin"
+.end:
+
+SECTION "TilePalettes", ROMX
+TilePalettes:
+        incbin "tile-palettes.bin"
+.end:
