@@ -336,6 +336,65 @@ LoadPuzzle:
         jr nz, :-
         ret
 
+PositionTiles:
+        ;; Update the tile map to reflect the positions in TilePositions
+        xor a, a
+        ldh [rVBK], a
+        ld hl, _SCRN0 + 32 + 2
+        ld de, TilePositions
+        ld b, 5
+.loop:
+        ld c, 5
+.row_loop:
+        ld a, c
+        or a, b
+        bit 0, a                ; skip gaps when b and c are even
+        jr nz, .not_gap
+        dec c
+        ld a, l
+        add a, 3
+        ld l, a
+.not_gap:
+        push bc
+        ld a, [de]
+        inc de
+        ld b, a                 ; a *= 3
+        sla b
+        add a, b
+        add a, FIRST_LETTER_TILE
+        ld b, a
+        ld [hl], b
+        inc b
+        ld a, l
+        add a, 32
+        ld l, a
+        jr nc, :+
+        inc h
+:       ld [hl], b
+        inc b
+        ld a, l
+        add a, 32
+        ld l, a
+        jr nc, :+
+        inc h
+:       ld [hl], b
+        ld a, l
+        sub a, 32 * 2 - 3
+        ld l, a
+        jr nc, :+
+        dec h
+:       pop bc
+        dec c
+        jr nz, .row_loop
+        ld a, l
+        add a, 32 * 3 - 5 * 3
+        ld l, a
+        jr nc, :+
+        inc h
+:       dec b
+        jr nz, .loop
+        ret
+
 SECTION "Variables", WRAM0
 VblankOccured: db
 FrameCount:      db
