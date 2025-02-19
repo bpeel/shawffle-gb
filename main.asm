@@ -119,6 +119,7 @@ Init:
         call ExtractPuzzleTiles
         call PositionTiles
         call InitTileStates
+        call SetTilePalettes
 
         ;; Clear any pending interrupts
         xor a, a
@@ -421,6 +422,61 @@ InitTileStates:
         ld a, e
         cp a, LOW(TileStates) + TILES_PER_PUZZLE
         jr c, .loop
+        ret
+
+SetTilePalettes:
+        ;; Update the tile attributes to reflect the states in TileStates
+        ld a, 1
+        ldh [rVBK], a
+        ld hl, _SCRN0 + 32 + 1
+        ld de, TileStates
+        ld b, 5
+.loop:
+        ld c, 5
+.row_loop:
+        ld a, c
+        or a, b
+        bit 0, a                ; skip gaps when b and c are even
+        jr nz, .not_gap
+        dec c
+        ld a, l
+        add a, 3
+        ld l, a
+.not_gap:
+        push bc
+        ld a, [de]
+        inc de
+        ld b, a
+        ld c, 3
+.tile_row_loop:
+        REPT 3
+        ld a, [hl]
+        and a, $f8
+        or a, b
+        ld [hli], a
+        ENDR
+        ld a, l
+        add a, 32 - 3
+        ld l, a
+        jr nc, :+
+        inc h
+:       dec c
+        jr nz, .tile_row_loop
+        ld a, l
+        sub a, 32 * 3 - 3
+        ld l, a
+        jr nc, :+
+        dec h
+:       pop bc
+        dec c
+        jr nz, .row_loop
+        ld a, l
+        add a, 32 * 3 - 5 * 3
+        ld l, a
+        jr nc, :+
+        inc h
+:       dec b
+        jr nz, .loop
         ret
 
 SECTION "Variables", WRAM0
