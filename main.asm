@@ -35,6 +35,27 @@ MACRO multiply_by_tile_size
         add a, b
 ENDM
 
+MACRO update_cursor_sprites
+        ;; arg1: Sprite number
+        ld a, [CursorX]
+        multiply_by_tile_size
+        add a, BOARD_X * 8 - CURSOR_X_OFFSET + 8
+        ld [OamMirror + (\1) * 4 + 1], a
+        ld [OamMirror + ((\1) + 2) * 4 + 1], a
+        add a, CURSOR_RIGHT_OFFSET
+        ld [OamMirror + ((\1) + 1) * 4 + 1], a
+        ld [OamMirror + ((\1) + 3) * 4 + 1], a
+
+        ld a, [CursorY]
+        multiply_by_tile_size
+        add a, BOARD_Y * 8 - CURSOR_Y_OFFSET + 16
+        ld [OamMirror + (\1) * 4], a
+        ld [OamMirror + ((\1) + 1) * 4], a
+        add a, CURSOR_BOTTOM_OFFSET
+        ld [OamMirror + ((\1) + 2) * 4], a
+        ld [OamMirror + ((\1) + 3) * 4], a
+ENDM
+
         ;; Offset from TileTiles to the three tiles that form the
         ;; background of a letter
 DEF LETTER_TEMPLATE_OFFSET EQU 16 * 4
@@ -61,6 +82,9 @@ DEF CURSOR_BOTTOM_OFFSET EQU 17
 DEF BOARD_X EQU 1               ; Position of the board in tiles
 DEF BOARD_Y EQU 1
 
+DEF CURSOR_SPRITE_NUM EQU 0
+DEF SELECTION_SPRITE_NUM EQU 4
+
 SECTION "Code", ROM0
 
 Init:
@@ -84,8 +108,8 @@ Init:
         call MemCpy
 
         ;; clear the OAM mirror
-        ld hl, OamMirror + 4 * 4
-        ld b, (40 - 4) * 4
+        ld hl, OamMirror + 4 * 8
+        ld b, (40 - 8) * 4
         xor a, a
 .clear_oam_loop:
         ld [hli], a
@@ -105,6 +129,8 @@ Init:
         ld [NewKeys], a
         ld [CursorX], a
         ld [CursorY], a
+        ld a, $ff
+        ld [SelectionPos], a
 
         ;; Set up the bg palette
         select_bank TilePalettes
@@ -676,6 +702,10 @@ HandleKeyPresses:
         jp z, HandleUp
         cp a, $80
         jp z, HandleDown
+        cp a, $01
+        jp z, HandleA
+        cp a, $02
+        jp z, HandleB
         ret
 
 HandleRight:
@@ -742,25 +772,39 @@ HandleDown:
         ld [CursorY], a
         jp UpdateCursorSprites
 
-UpdateCursorSprites:
+HandleA:
         ld a, [CursorX]
-        multiply_by_tile_size
-        add a, BOARD_X * 8 - CURSOR_X_OFFSET + 8
-        ld [OamMirror + 1], a
-        ld [OamMirror + 2 * 4 + 1], a
-        add a, CURSOR_RIGHT_OFFSET
-        ld [OamMirror + 1 * 4 + 1], a
-        ld [OamMirror + 3 * 4 + 1], a
-
+        ld b, a
         ld a, [CursorY]
-        multiply_by_tile_size
-        add a, BOARD_Y * 8 - CURSOR_Y_OFFSET + 16
-        ld [OamMirror], a
-        ld [OamMirror + 1 * 4], a
-        add a, CURSOR_BOTTOM_OFFSET
-        ld [OamMirror + 2 * 4], a
-        ld [OamMirror + 3 * 4], a
+        ld c, a
+        call XYToPos
+        ld b, a
+        add a, LOW(TileStates)
+        ld l, a
+        ld h, HIGH(TileStates)
+        ld a, [hl]
+        cp a, TILE_CORRECT
+        jp z, RemoveSelection    ; don’t allow selecting tiles in correct pos
+        ld a, b
+        ld [SelectionPos], a
+        update_cursor_sprites SELECTION_SPRITE_NUM
+        ret
 
+HandleB:
+        jp RemoveSelection
+
+UpdateCursorSprites:
+        update_cursor_sprites CURSOR_SPRITE_NUM
+        ret
+
+RemoveSelection:
+        xor a, a
+        ld [OamMirror + SELECTION_SPRITE_NUM * 4], a
+        ld [OamMirror + (SELECTION_SPRITE_NUM + 1) * 4], a
+        ld [OamMirror + (SELECTION_SPRITE_NUM + 2) * 4], a
+        ld [OamMirror + (SELECTION_SPRITE_NUM + 3) * 4], a
+        dec a
+        ld [SelectionPos], a
         ret
 
 TurnOffLcd:     
@@ -802,6 +846,7 @@ CurKeys:        db
 NewKeys:        db
 CursorX:        db
 CursorY:        db
+SelectionPos:   db              ; tile index or $ff if not set
 
 SECTION "GameState", WRAM0, ALIGN[BITWIDTH(TILES_PER_PUZZLE * 3 - 1)]
 PuzzleLetters:  ds TILES_PER_PUZZLE
@@ -862,6 +907,7 @@ WordPositions:
 
 SECTION "CursorSpritesInit", ROMX
 CursorSpritesInit:
+        ;; Main cursor
         db BOARD_Y * 8 - CURSOR_Y_OFFSET + 16
         db BOARD_X * 8 - CURSOR_X_OFFSET + 8
         db CURSOR_TILE
@@ -881,4 +927,21 @@ CursorSpritesInit:
         db BOARD_X * 8 - CURSOR_X_OFFSET + CURSOR_RIGHT_OFFSET + 8
         db CURSOR_TILE
         db OAMF_XFLIP | OAMF_YFLIP
+
+        ;; Selection
+        db 0, 0
+        db CURSOR_TILE
+        db 1
+
+        db 0, 0
+        db CURSOR_TILE
+        db OAMF_XFLIP | 1
+
+        db 0, 0
+        db CURSOR_TILE
+        db OAMF_YFLIP | 1
+
+        db 0, 0
+        db CURSOR_TILE
+        db OAMF_XFLIP | OAMF_YFLIP | 1
 .end:   
