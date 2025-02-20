@@ -834,6 +834,24 @@ XYToPos:
         sub a, c                ; a -= 2 * (y / 2) to compensate for gaps
         ret
 
+PosToXY:
+        ;; Given a grid index in a, return the x and y position in a,c
+        ld c, 0
+        REPT 2
+        cp a, 5
+        ret c
+        inc c
+        sub a, 5
+        cp a, 3
+        jr c, .end_on_odd_line
+        sub a, 3
+        inc c
+        ENDR
+        ret
+.end_on_odd_line:
+        sla a                   ; a *= 2 to compensate for gaps
+        ret
+
 SECTION "Variables", WRAM0
 VblankOccured: db
 FrameCount:      db
