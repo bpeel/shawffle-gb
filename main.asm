@@ -774,6 +774,22 @@ TurnOffLcd:
 	ldh [rLCDC], a
         ret
 
+XYToPos:
+        ;; Given an x,y position in b,c, return the grid position in
+        ;; a. This can be used as an index into PuzzleLetters etc.
+        ld a, c
+        sla a
+        sla a
+        add a, c                ; a = y * 5
+        add a, b                ; a += x
+        sra c
+        jp nc, :+               ; are we on an odd line?
+        sra b
+        sub a, b                ; a -= x/2 (to compensate for gaps on odd lines)
+:       sla c
+        sub a, c                ; a -= 2 * (y / 2) to compensate for gaps
+        ret
+
 SECTION "Variables", WRAM0
 VblankOccured: db
 FrameCount:      db
