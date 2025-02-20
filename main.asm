@@ -25,6 +25,16 @@ MACRO add_constant_to_de
         ld d, a
 ENDM
 
+MACRO multiply_by_tile_size
+        ;; multiply a by 24 (= three tiles, the size of a letter tile)
+        sla a
+        sla a
+        sla a
+        ld b, a
+        sla a
+        add a, b
+ENDM
+
         ;; Offset from TileTiles to the three tiles that form the
         ;; background of a letter
 DEF LETTER_TEMPLATE_OFFSET EQU 16 * 4
@@ -93,8 +103,8 @@ Init:
         ldh [rSCY], a
         ld [CurKeys], a
         ld [NewKeys], a
-        ld [CurrentPuzzle], a
-        ld [CurrentPuzzle + 1], a
+        ld [CursorX], a
+        ld [CursorY], a
 
         ;; Set up the bg palette
         select_bank TilePalettes
@@ -169,51 +179,9 @@ MainLoop:
         inc [hl]
 
         call UpdateKeys
-
-        ld a, [NewKeys]
-        bit 5, a                ; is left pressed?
-        jr z, .not_left
-        ld hl, CurrentPuzzle
-        ld a, [hli]
-        or a, [hl]
-        jr z, MainLoop          ; skip if PuzzleNumber is already 0
-        ld a, [CurrentPuzzle]
-        sub a, 1
-        ld [CurrentPuzzle], a
-        ld c, a
-        ld a, [CurrentPuzzle + 1]
-        jr nc, :+
-        dec a
-        ld [CurrentPuzzle + 1], a
-:       ld b, a
-        call ChangePuzzle
-        
-        jr MainLoop
-
-.not_left:      
-        bit 4, a                ; is right pressed?
-        jr z, MainLoop
-        ld a, [CurrentPuzzle + 1]
-        or a, a
-        jr z, .inc_ok
-        ld a, [CurrentPuzzle]
-        cp a, LOW((Puzzles2.end - Puzzles2) / BYTES_PER_PUZZLE \
-                  + PUZZLES_PER_BANK - 1)
-        jr nc, MainLoop         ; skip if already at max puzzle
-.inc_ok:
-        ld a, [CurrentPuzzle]
-        add a, 1
-        ld [CurrentPuzzle], a
-        ld c, a
-        ld a, [CurrentPuzzle + 1]
-        jr nc, :+
-        inc a
-        ld [CurrentPuzzle + 1], a
-:       ld b, a
-        call ChangePuzzle
+        call HandleKeyPresses
 
         jr MainLoop
-
 
 Vblank:
         push af
@@ -270,17 +238,6 @@ CopyScreenMap:
         inc h
 :       dec b
         jr nz, .line
-        ret
-
-ChangePuzzle:
-        di
-        call TurnOffLcd
-        call SetPuzzle
-        xor a, a
-        ldh [rIF], a
-        ei
-        ld a, GAME_LCDC
-        ldh [rLCDC], a
         ret
 
 SetPuzzle:
@@ -709,6 +666,103 @@ UpdateKeys:
 .knownret:      
         ret
 
+HandleKeyPresses:
+        ld a, [NewKeys]
+        cp a, $10
+        jp z, HandleRight
+        cp a, $20
+        jp z, HandleLeft
+        cp a, $40
+        jp z, HandleUp
+        cp a, $80
+        jp z, HandleDown
+        ret
+
+HandleRight:
+        ld a, [CursorX]
+        cp a, 4
+        ret nc
+        inc a
+        ld [CursorX], a
+        ld b, a
+        ld a, [CursorY]
+        and a, b
+        bit 0, a                ; if both are odd then we’re on a gap
+        jp z, UpdateCursorSprites
+        ld a, b
+        inc a
+        ld [CursorX], a
+        jp UpdateCursorSprites
+
+HandleLeft:
+        ld a, [CursorX]
+        or a, a
+        ret z
+        dec a
+        ld [CursorX], a
+        ld b, a
+        ld a, [CursorY]
+        and a, b
+        bit 0, a                ; if both are odd then we’re on a gap
+        jp z, UpdateCursorSprites
+        ld a, b
+        dec a
+        ld [CursorX], a
+        jp UpdateCursorSprites
+
+HandleUp:
+        ld a, [CursorY]
+        or a, a
+        ret z
+        dec a
+        ld [CursorY], a
+        ld b, a
+        ld a, [CursorX]
+        and a, b
+        bit 0, a                ; if both are odd then we’re on a gap
+        jp z, UpdateCursorSprites
+        ld a, b
+        dec a
+        ld [CursorY], a
+        jp UpdateCursorSprites
+
+HandleDown:
+        ld a, [CursorY]
+        cp a, 4
+        ret nc
+        inc a
+        ld [CursorY], a
+        ld b, a
+        ld a, [CursorX]
+        and a, b
+        bit 0, a                ; if both are odd then we’re on a gap
+        jp z, UpdateCursorSprites
+        ld a, b
+        inc a
+        ld [CursorY], a
+        jp UpdateCursorSprites
+
+UpdateCursorSprites:
+        ld a, [CursorX]
+        multiply_by_tile_size
+        add a, BOARD_X * 8 - CURSOR_X_OFFSET + 8
+        ld [OamMirror + 1], a
+        ld [OamMirror + 2 * 4 + 1], a
+        add a, CURSOR_RIGHT_OFFSET
+        ld [OamMirror + 1 * 4 + 1], a
+        ld [OamMirror + 3 * 4 + 1], a
+
+        ld a, [CursorY]
+        multiply_by_tile_size
+        add a, BOARD_Y * 8 - CURSOR_Y_OFFSET + 16
+        ld [OamMirror], a
+        ld [OamMirror + 1 * 4], a
+        add a, CURSOR_BOTTOM_OFFSET
+        ld [OamMirror + 2 * 4], a
+        ld [OamMirror + 3 * 4], a
+
+        ret
+
 TurnOffLcd:     
 	; Do not turn the LCD off outside of VBlank
 .wait_vblank:
@@ -730,7 +784,8 @@ CorrectLetters: db
 SearchLetter:   db
 CurKeys:        db
 NewKeys:        db
-CurrentPuzzle:  dw
+CursorX:        db
+CursorY:        db
 
 SECTION "GameState", WRAM0, ALIGN[BITWIDTH(TILES_PER_PUZZLE * 3 - 1)]
 PuzzleLetters:  ds TILES_PER_PUZZLE
