@@ -35,8 +35,9 @@ $(TILE_FILES): tile-tiles.png tile-palettes.txt
 	--palette tile-palettes.bin \
 	$<
 
-$(SPRITE_FILES): sprite-tiles.png
+$(SPRITE_FILES): sprite-tiles.png sprite-palettes.txt
 	rgbgfx \
+	--colors hex:sprite-palettes.txt \
 	--color-curve \
 	--output $@ \
 	--palette sprite-palettes.bin \
