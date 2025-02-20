@@ -34,13 +34,19 @@ DEF BYTES_PER_PUZZLE EQU 48
 
 DEF TILES_PER_PUZZLE EQU 5 * 3 + 3 * 2
 
-DEF FIRST_LETTER_TILE EQU 7
+DEF CURSOR_TILE EQU 7
+DEF FIRST_LETTER_TILE EQU 8
 
 DEF TILE_INCORRECT EQU 0
 DEF TILE_WRONG_POS EQU 1
 DEF TILE_CORRECT EQU 2
 
 DEF GAME_LCDC EQU LCDCF_ON | LCDCF_BG8000 | LCDCF_OBJON | LCDCF_OBJ8
+
+DEF CURSOR_X_OFFSET EQU 1
+DEF CURSOR_Y_OFFSET EQU 1
+DEF CURSOR_RIGHT_OFFSET EQU 18
+DEF CURSOR_BOTTOM_OFFSET EQU 17
 
 DEF BOARD_X EQU 1               ; Position of the board in tiles
 DEF BOARD_Y EQU 1
@@ -60,9 +66,16 @@ Init:
         ld bc, OamDmaCode.end - OamDmaCode
         call MemCpy
 
-        ;; clear the OAM mirror
+        ;; Set up the cursor sprites
+        select_bank CursorSpritesInit
+        ld de, CursorSpritesInit
         ld hl, OamMirror
-        ld b, $a0
+        ld bc, CursorSpritesInit.end - CursorSpritesInit
+        call MemCpy
+
+        ;; clear the OAM mirror
+        ld hl, OamMirror + 4 * 4
+        ld b, (40 - 4) * 4
         xor a, a
 .clear_oam_loop:
         ld [hli], a
@@ -94,6 +107,16 @@ Init:
         dec b
         jr nz, :-
 
+        ;; Set up the obj palette
+        ld a, OCPSF_AUTOINC
+        ldh [rOCPS], a
+        ld b, SpritePalettes.end - SpritePalettes
+        ld hl, SpritePalettes
+:       ld a, [hli]
+        ldh [rOCPD], a
+        dec b
+        jr nz, :-
+
         select_bank TileMap
         xor a, a
         ldh [rVBK], a
@@ -106,11 +129,11 @@ Init:
         ld hl, _SCRN0
         call CopyScreenMap
 
-        select_bank TileTiles
+        select_bank Tiles
         xor a, a
         ldh [rVBK], a
-        ld de, TileTiles
-        ld bc, TileTiles.end - TileTiles
+        ld de, Tiles
+        ld bc, Tiles.end - Tiles
         ld hl, $8000
         call MemCpy
 
@@ -296,8 +319,8 @@ ExtractLetterTiles:
 
         ;; copy the template into the tile
         push hl
-        select_bank TileTiles
-        ld de, TileTiles + LETTER_TEMPLATE_OFFSET
+        select_bank Tiles
+        ld de, Tiles + LETTER_TEMPLATE_OFFSET
         ld c, 16 * 3
 :       ld a, [de]
         ld [hli], a
@@ -723,16 +746,20 @@ SECTION "LetterTiles", ROMX
 LetterTiles:
         incbin "letter-tiles.bin"
 
-SECTION "TileTiles", ROMX
-TileTiles:
+SECTION "Tiles", ROMX
+Tiles:
         ;; first tile empty
         ds 16, $00
         incbin "tile-tiles.bin"
+        incbin "sprite-tiles.bin"
 .end:
 
-SECTION "TilePalettes", ROMX
+SECTION "Palettes", ROMX
 TilePalettes:
         incbin "tile-palettes.bin"
+.end:
+SpritePalettes:
+        incbin "sprite-palettes.bin"
 .end:
 
 SECTION "Puzzles", ROMX
@@ -761,3 +788,26 @@ WordPositions:
         db 0, 5, 8, 13, 16
         db 2, 6, 10, 14, 18
         db 4, 7, 12, 15, 20
+
+SECTION "CursorSpritesInit", ROMX
+CursorSpritesInit:
+        db BOARD_Y * 8 - CURSOR_Y_OFFSET + 16
+        db BOARD_X * 8 - CURSOR_X_OFFSET + 8
+        db CURSOR_TILE
+        db 0
+
+        db BOARD_Y * 8 - CURSOR_Y_OFFSET + 16
+        db BOARD_X * 8 - CURSOR_X_OFFSET + CURSOR_RIGHT_OFFSET + 8
+        db CURSOR_TILE
+        db OAMF_XFLIP
+
+        db BOARD_Y * 8 - CURSOR_Y_OFFSET + CURSOR_BOTTOM_OFFSET + 16
+        db BOARD_X * 8 - CURSOR_X_OFFSET + 8
+        db CURSOR_TILE
+        db OAMF_YFLIP
+
+        db BOARD_Y * 8 - CURSOR_Y_OFFSET + CURSOR_BOTTOM_OFFSET + 16
+        db BOARD_X * 8 - CURSOR_X_OFFSET + CURSOR_RIGHT_OFFSET + 8
+        db CURSOR_TILE
+        db OAMF_XFLIP | OAMF_YFLIP
+.end:   

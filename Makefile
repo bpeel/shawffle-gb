@@ -3,7 +3,10 @@ OBJS = \
 	tilemap.o
 TILE_FILES = \
 	tile-tiles.bin \
-	tile-palettes.bin \
+	tile-palettes.bin
+SPRITE_FILES = \
+	sprite-tiles.bin \
+	sprite-palettes.bin
 
 %.o: %.asm
 	rgbasm -o $@ $<
@@ -16,9 +19,9 @@ shawffle.gb: $(OBJS)
 .PHONY: clean all
 
 clean:
-	rm -f $(OBJS) shawffle.gb $(TILE_FILES)
+	rm -f $(OBJS) shawffle.gb $(TILE_FILES) $(SPRITE_FILES)
 
-main.o: letter-tiles.bin $(TILE_FILES) puzzles.bin
+main.o: letter-tiles.bin $(TILE_FILES) $(SPRITE_FILES) puzzles.bin
 
 letter-tiles.bin: letter-tiles.png make-binary-letter-tiles.py
 	./make-binary-letter-tiles.py letter-tiles.png letter-tiles.bin
@@ -30,6 +33,13 @@ $(TILE_FILES): tile-tiles.png tile-palettes.txt
 	--columns \
 	--output $@ \
 	--palette tile-palettes.bin \
+	$<
+
+$(SPRITE_FILES): sprite-tiles.png
+	rgbgfx \
+	--color-curve \
+	--output $@ \
+	--palette sprite-palettes.bin \
 	$<
 
 all: shawffle.gb
