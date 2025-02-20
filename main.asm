@@ -600,20 +600,56 @@ FindWrongPositions:
         ENDR
         jp FindWrongPositionsForWord
 
-SetTilePalettes:
-        ;; Update the tile attributes to reflect the states in TileStates
+SetTilePalettesForRow:
+        ;; a = row
+
+        ;; get index of first tile in row into a
+        ld b, a
+        sla a
+        sla a
+        add a, b                ; a = y * 5
+        ld c, b
+        sra c
+        sla c                   ; mask out bottom bit of c
+        sub a, c                ; a -= 2 * (y / 2) to compensate for gaps
+        ld d, HIGH(TileStates)
+        add a, LOW(TileStates)
+        ld e, a
+        jr nc, :+
+        inc d
+:
+        ;; get b*96 into ha
+        ld h, 0
+        ld a, b
+        REPT 5
+        sla a
+        ENDR
+        ld c, a                 ; c = row*32 (should fit in a byte)
+        sla a
+        rl h                    ; ha = row*64 (might overflow a byte)
+        add a, c
+        jr nc, :+
+        inc h
+:
+        ;; add the address of the first tile of the grid
+        DEF first_tile = _SCRN0 + (BOARD_Y * 32) + BOARD_X
+        add a, LOW(first_tile)
+        ld l, a
+        ld a, h
+        adc a, HIGH(first_tile)
+        ld h, a
+        PURGE first_tile
+        
         ld a, 1
         ldh [rVBK], a
-        ld hl, _SCRN0 + (BOARD_Y * 32) + BOARD_X
-        ld de, TileStates
-        ld b, 5
-.loop:
+
         ld c, 5
-.row_loop:
+.loop:  
         ld a, c
-        or a, b
-        bit 0, a                ; skip gaps when b and c are even
-        jr nz, .not_gap
+        xor a, 1
+        and a, b
+        bit 0, a                ; skip gaps when c is even and b is odd
+        jr z, .not_gap
         dec c
         ld a, l
         add a, 3
@@ -645,15 +681,18 @@ SetTilePalettes:
         dec h
 :       pop bc
         dec c
-        jr nz, .row_loop
-        ld a, l
-        add a, 32 * 3 - 5 * 3
-        ld l, a
-        jr nc, :+
-        inc h
-:       dec b
         jr nz, .loop
         ret
+
+SetTilePalettes:
+        ld a, 4
+.loop:
+        push af
+        call SetTilePalettesForRow
+        pop af
+        sub a, 1
+        jr nc, .loop
+        ret        
 
         ;; Copied from https://gbdev.io/gb-asm-tutorial/part2/input.html
 UpdateKeys:
