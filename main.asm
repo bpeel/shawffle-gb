@@ -784,7 +784,7 @@ HandleA:
         ld h, HIGH(TileStates)
         ld a, [hl]
         cp a, TILE_CORRECT
-        jp z, RemoveSelection    ; don’t allow selecting tiles in correct pos
+        ret z                    ; don’t allow selecting tiles in correct pos
         ld a, b
         ld [SelectionPos], a
         update_cursor_sprites SELECTION_SPRITE_NUM
