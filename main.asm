@@ -47,14 +47,7 @@ Init:
 	xor a, a
 	ldh [rNR52], a
 
-	; Do not turn the LCD off outside of VBlank
-.wait_vblank:
-	ldh a, [rLY]
-	cp 144
-	jr nz, .wait_vblank
-        ; Turn the LCD off
-	xor a, a
-	ldh [rLCDC], a
+        call TurnOffLcd
 
         ;; Set up the OamDma transfer in HRAM
         ld de, OamDmaCode
@@ -627,6 +620,17 @@ UpdateKeys:
         ldh a, [rP1] ; this read counts
         or a, $F0 ; A7-4 = 1; A3-0 = unpressed keys
 .knownret:      
+        ret
+
+TurnOffLcd:     
+	; Do not turn the LCD off outside of VBlank
+.wait_vblank:
+	ldh a, [rLY]
+	cp 144
+	jr nz, .wait_vblank
+        ; Turn the LCD off
+	xor a, a
+	ldh [rLCDC], a
         ret
 
 SECTION "Variables", WRAM0
