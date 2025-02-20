@@ -131,6 +131,8 @@ Init:
         ld [CursorY], a
         ld a, $ff
         ld [SelectionPos], a
+        ld [QueuedSwap], a
+        ld [NextPaletteLine], a
 
         ;; Set up the bg palette
         select_bank TilePalettes
@@ -204,6 +206,24 @@ MainLoop:
         ld hl, FrameCount
         inc [hl]
 
+        ld a, [QueuedSwap]
+        cp a, $ff
+        jr z, .handled_swap
+        call HandleSwap
+        jr .did_work            ; only do one thing per vblank
+.handled_swap:
+
+        ld a, [NextPaletteLine]
+        cp a, 5
+        jr nc, .handled_palettes
+        inc a
+        ld [NextPaletteLine], a
+        dec a
+        call SetTilePalettesForRow
+        jr .did_work
+.handled_palettes:      
+
+.did_work:       
         call UpdateKeys
         call HandleKeyPresses
 
@@ -462,6 +482,65 @@ PositionTiles:
         inc h
 :       dec b
         jr nz, .loop
+        ret
+
+HandleSwap:
+        xor a, a
+        ldh [rVBK], a
+        ld a, [QueuedSwap]
+        call .update_letter_tile
+        ld a, $ff
+        ld [QueuedSwap], a
+        ld a, [QueuedSwap + 1]
+.update_letter_tile:
+        ld e, a
+        add a, LOW(TilePositions)
+        ld l, a
+        ld h, HIGH(TilePositions)
+        ld a, [hl]
+        ld b, a
+        sla a
+        add a, b                ; a *= 3
+        add a, FIRST_LETTER_TILE
+        ld d, a
+
+        ld a, e
+        call PosToXY
+        ld b, a
+        sla a
+        add a, b                ; a *= 3
+        add a, BOARD_X + 1
+        ld b, a
+        ld a, c
+        sla a
+        add a, c                ; a = y_pos * 3
+        add a, BOARD_Y
+        ld h, 0
+        REPT 5
+        sla a
+        rl h
+        ENDR                    ; ha = a * 32
+        add a, b
+        jr nc, :+
+        inc h
+:       ld l, a
+        ld a, h
+        add a, HIGH(_SCRN0)
+        ld h, a
+        ld [hl], d
+        inc d
+        ld a, l
+        add a, 32
+        ld l, a
+        jr nc, :+
+        inc h
+:       ld [hl], d
+        inc d
+        add a, 32
+        ld l, a
+        jr nc, :+
+        inc h
+:       ld [hl], d
         ret
 
 InitTileStates:
@@ -824,6 +903,41 @@ HandleA:
         ld a, [hl]
         cp a, TILE_CORRECT
         ret z                    ; don’t allow selecting tiles in correct pos
+
+        ld a, [SelectionPos]
+        cp a, $ff
+        jr z, .set_selection
+
+        cp a, b
+        ret z                   ; don’t allow swapping the same index
+
+        ;; if we make it here we have two valid indices to swap in a and b
+        ld hl, QueuedSwap
+        ld [hli], a
+        ld [hl], b
+
+        add a, LOW(TilePositions)
+        ld l, a
+        ld h, HIGH(TilePositions)
+        ld a, b
+        add a, LOW(TilePositions)
+        ld e, a
+        ld d, HIGH(TilePositions)
+        ;; hl and de now point to the bytes to swap
+        ld a, [de]
+        ld b, [hl]
+        ld [hl], a
+        ld a, b
+        ld [de], a
+
+        xor a, a
+        ld [NextPaletteLine], a
+
+        call InitTileStates
+        call FindWrongPositions
+        jp RemoveSelection
+
+.set_selection:
         ld a, b
         ld [SelectionPos], a
         update_cursor_sprites SELECTION_SPRITE_NUM
@@ -904,6 +1018,8 @@ NewKeys:        db
 CursorX:        db
 CursorY:        db
 SelectionPos:   db              ; tile index or $ff if not set
+QueuedSwap:     ds 2            ; swap to do during vblank or $ff if none
+NextPaletteLine: db
 
 SECTION "GameState", WRAM0, ALIGN[BITWIDTH(TILES_PER_PUZZLE * 3 - 1)]
 PuzzleLetters:  ds TILES_PER_PUZZLE
