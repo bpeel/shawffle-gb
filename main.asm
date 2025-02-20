@@ -20,10 +20,8 @@ MACRO add_constant_to_de
         ld a, LOW(\1)
         add a, e
         ld e, a
-        jr nc, :+
-        inc d
-:       ld a, d
-        add a, HIGH(\1)
+        ld a, d
+        adc a, HIGH(\1)
         ld d, a
 ENDM
 
@@ -307,11 +305,9 @@ LoadPuzzle:
         rl h
         ENDR
         add a, e
-        jr nc, :+
-        inc h
-:       ld e, a
+        ld e, a
         ld a, d
-        add h
+        adc h
         ld d, a
 
         ld a, b
