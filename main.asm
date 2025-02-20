@@ -40,6 +40,8 @@ DEF TILE_INCORRECT EQU 0
 DEF TILE_WRONG_POS EQU 1
 DEF TILE_CORRECT EQU 2
 
+DEF GAME_LCDC EQU LCDCF_ON | LCDCF_BG8000 | LCDCF_OBJON | LCDCF_OBJ8
+
 SECTION "Code", ROM0
 
 Init:
@@ -75,6 +77,8 @@ Init:
         ldh [rSCY], a
         ld [CurKeys], a
         ld [NewKeys], a
+        ld [CurrentPuzzle], a
+        ld [CurrentPuzzle + 1], a
 
         ;; Set up the bg palette
         select_bank TilePalettes
@@ -108,12 +112,7 @@ Init:
         call MemCpy
 
         ld bc, 0
-        call LoadPuzzle
-        call ExtractPuzzleTiles
-        call PositionTiles
-        call InitTileStates
-        call FindWrongPositions
-        call SetTilePalettes
+        call SetPuzzle
 
         ;; Clear any pending interrupts
         xor a, a
@@ -125,7 +124,7 @@ Init:
         ei
 
         ; Enable the LCD
-        ld a, LCDCF_ON | LCDCF_BG8000 | LCDCF_OBJON | LCDCF_OBJ8
+        ld a, GAME_LCDC
         ldh [rLCDC], a
 
 MainLoop:
@@ -144,6 +143,48 @@ MainLoop:
         inc [hl]
 
         call UpdateKeys
+
+        ld a, [NewKeys]
+        bit 5, a                ; is left pressed?
+        jr z, .not_left
+        ld hl, CurrentPuzzle
+        ld a, [hli]
+        or a, [hl]
+        jr z, MainLoop          ; skip if PuzzleNumber is already 0
+        ld a, [CurrentPuzzle]
+        sub a, 1
+        ld [CurrentPuzzle], a
+        ld c, a
+        ld a, [CurrentPuzzle + 1]
+        jr nc, :+
+        dec a
+        ld [CurrentPuzzle + 1], a
+:       ld b, a
+        call ChangePuzzle
+        
+        jr MainLoop
+
+.not_left:      
+        bit 4, a                ; is right pressed?
+        jr z, MainLoop
+        ld a, [CurrentPuzzle + 1]
+        or a, a
+        jr z, .inc_ok
+        ld a, [CurrentPuzzle]
+        cp a, LOW((Puzzles2.end - Puzzles2) / BYTES_PER_PUZZLE \
+                  + PUZZLES_PER_BANK - 1)
+        jr nc, MainLoop         ; skip if already at max puzzle
+.inc_ok:
+        ld a, [CurrentPuzzle]
+        add a, 1
+        ld [CurrentPuzzle], a
+        ld c, a
+        ld a, [CurrentPuzzle + 1]
+        jr nc, :+
+        inc a
+        ld [CurrentPuzzle + 1], a
+:       ld b, a
+        call ChangePuzzle
 
         jr MainLoop
 
@@ -204,6 +245,26 @@ CopyScreenMap:
 :       dec b
         jr nz, .line
         ret
+
+ChangePuzzle:
+        di
+        call TurnOffLcd
+        call SetPuzzle
+        xor a, a
+        ldh [rIF], a
+        ei
+        ld a, GAME_LCDC
+        ldh [rLCDC], a
+        ret
+
+SetPuzzle:
+        ;; bc = puzzle
+        call LoadPuzzle
+        call ExtractPuzzleTiles
+        call PositionTiles
+        call InitTileStates
+        call FindWrongPositions
+        jp SetTilePalettes
 
 ExtractPuzzleTiles:
         xor a, a
@@ -643,6 +704,7 @@ CorrectLetters: db
 SearchLetter:   db
 CurKeys:        db
 NewKeys:        db
+CurrentPuzzle:  dw
 
 SECTION "GameState", WRAM0, ALIGN[BITWIDTH(TILES_PER_PUZZLE * 3 - 1)]
 PuzzleLetters:  ds TILES_PER_PUZZLE
@@ -677,6 +739,7 @@ Puzzles:
 SECTION "Puzzles2", ROMX
 Puzzles2:
         incbin "puzzles.bin", PUZZLES_PER_BANK * BYTES_PER_PUZZLE
+.end
 
 SECTION "WordPositions", ROMX
 WordPositions:
