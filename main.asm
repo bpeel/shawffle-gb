@@ -117,6 +117,7 @@ Init:
         call ExtractPuzzleTiles
         call PositionTiles
         call InitTileStates
+        call FindWrongPositions
         call SetTilePalettes
 
         ;; Clear any pending interrupts
@@ -420,6 +421,115 @@ InitTileStates:
         jr c, .loop
         ret
 
+FindWrongPositionsForWord:
+        ;; de = pointer to list of word offsets
+        ;; leaves de after end of list of offsets
+        xor a, a
+        ld [UsedLetters], a
+        ;; Find letters that are already in the correct position and
+        ;; mark them as used
+        ld h, HIGH(TileStates)
+        ld bc, $0105            ; b = bit for letter, c = counter
+        push de
+.find_used_letters_loop:
+        ld a, [de]
+        inc de
+        add a, LOW(TileStates)
+        ld l, a
+        ld a, [hl]
+        cp a, TILE_CORRECT
+        jr nz, .not_correct
+        ld a, [UsedLetters]
+        or a, b
+        ld [UsedLetters], a
+.not_correct:
+        sla b
+        dec c
+        jr nz, .find_used_letters_loop
+        pop de
+        ld a, [UsedLetters]
+        ld [CorrectLetters], a
+
+        ;; Iterate through each letter to check if there is a matching
+        ;; unused tile
+        ld bc, $0100            ; b = bit for letter, c = counter
+.outer_loop:
+        ld a, [CorrectLetters]  ; skip letters that are already correct
+        and a, b
+        jr nz, .next_letter
+        ;; extract the letter that we’re looking for and store it in
+        ;; SearchLetter
+        ld a, [de]
+        add a, LOW(PuzzleLetters)
+        ld l, a
+        ld h, HIGH(PuzzleLetters)
+        ld a, [hl]
+        ld [SearchLetter], a
+        ;; look for an unused letter matching it
+        push bc
+        push de
+        ld a, e
+        sub a, c                ; put de back to start
+        ld e, a
+        jr nc, :+
+        dec d
+:       ld bc, $0105            ; b = bit, c = counter
+.inner_loop:
+        ld a, [UsedLetters]
+        and a, b
+        jr nz, .next_inner_letter
+        ld a, [de]
+        add a, LOW(TilePositions)
+        ld l, a
+        ld h, HIGH(TilePositions)
+        ld a, [hl]
+        add a, LOW(PuzzleLetters)
+        ld l, a
+        ld h, HIGH(PuzzleLetters)
+        ld l, [hl]
+        ld a, [SearchLetter]
+        cp a, l
+        jr nz, .next_inner_letter
+        ;; we’ve found a letter, so mark it as used
+        ld a, [UsedLetters]
+        or a, b
+        ld [UsedLetters], a
+        ;; change the state of the letter
+        ld a, [de]
+        add a, LOW(TileStates)
+        ld l, a
+        ld h, HIGH(TileStates)
+        ld a, TILE_WRONG_POS
+        ld [hl], a
+        jr .end_inner_loop
+
+.next_inner_letter:
+        inc de
+        sla b
+        dec c
+        jr nz, .inner_loop
+.end_inner_loop:
+        pop de
+        pop bc
+
+.next_letter:
+        inc de
+        sla b
+        ld a, c
+        inc a
+        ld c, a
+        cp a, 5
+        jr c, .outer_loop
+        ret
+
+FindWrongPositions:
+        select_bank WordPositions
+        ld de, WordPositions
+        REPT 5
+        call FindWrongPositionsForWord
+        ENDR
+        jp FindWrongPositionsForWord
+
 SetTilePalettes:
         ;; Update the tile attributes to reflect the states in TileStates
         ld a, 1
@@ -480,6 +590,9 @@ VblankOccured: db
 FrameCount:      db
 ScrollX:         db
 ScrollY:         db
+UsedLetters:    db
+CorrectLetters: db
+SearchLetter:   db
 
 SECTION "GameState", WRAM0, ALIGN[BITWIDTH(TILES_PER_PUZZLE * 3 - 1)]
 PuzzleLetters:  ds TILES_PER_PUZZLE
@@ -514,3 +627,21 @@ Puzzles:
 SECTION "Puzzles2", ROMX
 Puzzles2:
         incbin "puzzles.bin", PUZZLES_PER_BANK * BYTES_PER_PUZZLE
+
+SECTION "WordPositions", ROMX
+WordPositions:
+        ;; Tile positions for each letter in each of the six words
+
+        ;; 0  1   2  3  4
+        ;; 5      6     7
+        ;; 8  9  10 11 12
+        ;; 13    14    15
+        ;; 16 17 18 19 20
+
+        db 0, 1, 2, 3, 4
+        db 8, 9, 10, 11, 12
+        db 16, 17, 18, 19, 20
+
+        db 0, 5, 8, 13, 16
+        db 2, 6, 10, 14, 18
+        db 4, 7, 12, 15, 20
