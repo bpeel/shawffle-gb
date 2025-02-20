@@ -42,6 +42,9 @@ DEF TILE_CORRECT EQU 2
 
 DEF GAME_LCDC EQU LCDCF_ON | LCDCF_BG8000 | LCDCF_OBJON | LCDCF_OBJ8
 
+DEF BOARD_X EQU 1               ; Position of the board in tiles
+DEF BOARD_Y EQU 1
+
 SECTION "Code", ROM0
 
 Init:
@@ -400,7 +403,7 @@ PositionTiles:
         ;; Update the tile map to reflect the positions in TilePositions
         xor a, a
         ldh [rVBK], a
-        ld hl, _SCRN0 + 32 + 2
+        ld hl, _SCRN0 + (BOARD_Y * 32) + BOARD_X + 1
         ld de, TilePositions
         ld b, 5
 .loop:
@@ -595,7 +598,7 @@ SetTilePalettes:
         ;; Update the tile attributes to reflect the states in TileStates
         ld a, 1
         ldh [rVBK], a
-        ld hl, _SCRN0 + 32 + 1
+        ld hl, _SCRN0 + (BOARD_Y * 32) + BOARD_X
         ld de, TileStates
         ld b, 5
 .loop:
