@@ -208,6 +208,8 @@ CopyScreenMap:
         ret
 
 ExtractPuzzleTiles:
+        xor a, a
+        ldh [rVBK], a
         ld hl, $8000 + FIRST_LETTER_TILE * 16
         ld c, TILES_PER_PUZZLE
         ld de, PuzzleLetters
