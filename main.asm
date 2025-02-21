@@ -121,9 +121,7 @@ Init:
         xor a, a
         ld [VblankOccured], a
         ld [FrameCount], a
-        ld [ScrollX], a
         ldh [rSCX], a
-        ld [ScrollY], a
         ldh [rSCY], a
         ld [CurKeys], a
         ld [NewKeys], a
@@ -233,11 +231,6 @@ Vblank:
         push af
         ;; Copy the OAM mirror using DMA
         call OamDma
-        ;; update the scroll position
-        ld a, [ScrollX]
-        ldh [rSCX], a
-        ld a, [ScrollY]
-        ldh [rSCY], a
         ;; let the main loop know a vblank occured
         ld a, 1
         ld [VblankOccured], a
@@ -1008,8 +1001,6 @@ PosToXY:
 SECTION "Variables", WRAM0
 VblankOccured: db
 FrameCount:      db
-ScrollX:         db
-ScrollY:         db
 UsedLetters:    db
 CorrectLetters: db
 SearchLetter:   db
