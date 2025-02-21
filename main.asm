@@ -1,4 +1,5 @@
 INCLUDE "hardware.inc"
+INCLUDE "charmap.asm"
 
 SECTION "Header", ROM0[$0000]
 
@@ -85,6 +86,11 @@ DEF BOARD_Y EQU 1
 DEF CURSOR_SPRITE_NUM EQU 0
 DEF SELECTION_SPRITE_NUM EQU 4
 
+DEF SWAPS_REMAINING_X EQU BOARD_X + 1
+DEF SWAPS_REMAINING_Y EQU SCRN_Y_B - 1
+
+DEF INITIAL_SWAPS EQU 15
+
 SECTION "Code", ROM0
 
 Init:
@@ -131,6 +137,12 @@ Init:
         ld [SelectionPos], a
         ld [QueuedSwap], a
         ld [NextPaletteLine], a
+        ld a, INITIAL_SWAPS / 10 + "0"
+        ld [SwapsRemainingTiles], a
+        ld a, INITIAL_SWAPS % 10 + "0"
+        ld [SwapsRemainingTiles + 1], a
+        ld a, (INITIAL_SWAPS / 10 << 4) | (INITIAL_SWAPS % 10)
+        ld [SwapsRemaining], a
 
         ;; Set up the bg palette
         select_bank TilePalettes
@@ -216,6 +228,14 @@ MainLoop:
         ld [VblankOccured], a   ; reset the VBlankOccured flag
         ld hl, FrameCount
         inc [hl]
+
+        ;; Update the remaining swaps
+        xor a, a
+        ldh [rVBK], a
+        ld a, [SwapsRemainingTiles]
+        ld [_SCRN0 + SWAPS_REMAINING_Y * SCRN_VX_B + SWAPS_REMAINING_X], a
+        ld a, [SwapsRemainingTiles + 1]
+        ld [_SCRN0 + SWAPS_REMAINING_Y * SCRN_VX_B + SWAPS_REMAINING_X + 1], a
 
         ld a, [QueuedSwap]
         cp a, $ff
@@ -896,6 +916,10 @@ HandleDown:
         jp UpdateCursorSprites
 
 HandleA:
+        ld a, [SwapsRemaining]
+        or a, a
+        ret z                   ; don’t allowing swapping if no swaps remain
+
         ld a, [CursorX]
         ld b, a
         ld a, [CursorY]
@@ -940,6 +964,7 @@ HandleA:
 
         call InitTileStates
         call FindWrongPositions
+        call DecrementSwapsRemaining
         jp RemoveSelection
 
 .set_selection:
@@ -963,6 +988,24 @@ RemoveSelection:
         ld [OamMirror + (SELECTION_SPRITE_NUM + 3) * 4], a
         dec a
         ld [SelectionPos], a
+        ret
+
+DecrementSwapsRemaining:
+        ld a, [SwapsRemaining]
+        dec a
+        daa
+        ld [SwapsRemaining], a
+        ld b, a
+        swap a
+        and a, $0f
+        jr nz, :+
+        ld a, " " - "0"
+:       add a, "0"
+        ld [SwapsRemainingTiles], a
+        ld a, b
+        and a, $0f
+        add a, "0"
+        ld [SwapsRemainingTiles + 1], a
         ret
 
 TurnOffLcd:     
@@ -1023,6 +1066,8 @@ CursorY:        db
 SelectionPos:   db              ; tile index or $ff if not set
 QueuedSwap:     ds 2            ; swap to do during vblank or $ff if none
 NextPaletteLine: db
+SwapsRemainingTiles:    ds 2    ; Tiles to set for the remaining swaps display
+SwapsRemaining: db              ; coded in BCD
 
 SECTION "GameState", WRAM0, ALIGN[BITWIDTH(TILES_PER_PUZZLE * 3 - 1)]
 PuzzleLetters:  ds TILES_PER_PUZZLE

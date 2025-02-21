@@ -22,7 +22,14 @@ shawffle.gb: $(OBJS)
 clean:
 	rm -f $(OBJS) shawffle.gb $(TILE_FILES) $(SPRITE_FILES) font.bin
 
-main.o: letter-tiles.bin $(TILE_FILES) $(SPRITE_FILES) puzzles.bin font.bin
+main.o: \
+	letter-tiles.bin \
+	$(TILE_FILES) \
+	$(SPRITE_FILES) \
+	puzzles.bin \
+	font.bin \
+	charmap.asm
+tilemap.o: charmap.asm
 
 letter-tiles.bin: letter-tiles.png make-binary-letter-tiles.py
 	./make-binary-letter-tiles.py letter-tiles.png letter-tiles.bin
