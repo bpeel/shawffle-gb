@@ -1,9 +1,9 @@
 OBJS = \
 	main.o \
 	tilemap.o
-TILE_FILES = \
-	tile-tiles.bin \
-	tile-palettes.bin
+BACKGROUND_FILES = \
+	background-tiles.bin \
+	background-palettes.bin
 SPRITE_FILES = \
 	sprite-tiles.bin \
 	sprite-palettes.bin
@@ -20,11 +20,11 @@ shawffle.gb: $(OBJS)
 .PHONY: clean all
 
 clean:
-	rm -f $(OBJS) shawffle.gb $(TILE_FILES) $(SPRITE_FILES) font.bin
+	rm -f $(OBJS) shawffle.gb $(BACKGROUND_FILES) $(SPRITE_FILES) font.bin
 
 main.o: \
 	letter-tiles.bin \
-	$(TILE_FILES) \
+	$(BACKGROUND_FILES) \
 	$(SPRITE_FILES) \
 	puzzles.bin \
 	font.bin \
@@ -34,13 +34,13 @@ tilemap.o: charmap.asm
 letter-tiles.bin: letter-tiles.png make-binary-letter-tiles.py
 	./make-binary-letter-tiles.py letter-tiles.png letter-tiles.bin
 
-$(TILE_FILES): tile-tiles.png tile-palettes.txt
+$(BACKGROUND_FILES): background-tiles.png background-palettes.txt
 	rgbgfx \
-	--colors hex:tile-palettes.txt \
+	--colors hex:background-palettes.txt \
 	--color-curve \
 	--columns \
 	--output $@ \
-	--palette tile-palettes.bin \
+	--palette background-palettes.bin \
 	$<
 
 $(SPRITE_FILES): sprite-tiles.png sprite-palettes.txt

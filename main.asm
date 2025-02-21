@@ -62,7 +62,7 @@ MACRO queue_message
         ld [QueuedMessage], a
 ENDM
 
-        ;; Offset from TileTiles to the three tiles that form the
+        ;; Offset from BackgroundTiles to the three tiles that form the
         ;; background of a letter
 DEF LETTER_TEMPLATE_OFFSET EQU 16 * 4
 
@@ -71,9 +71,9 @@ DEF BYTES_PER_PUZZLE EQU 48
 
 DEF TILES_PER_PUZZLE EQU 5 * 3 + 3 * 2
 
-DEF CURSOR_TILE EQU 7
-DEF STAR_TILE EQU 8
-DEF FIRST_LETTER_TILE EQU 72
+DEF CURSOR_TILE EQU 19
+DEF STAR_TILE EQU 7
+DEF FIRST_LETTER_TILE EQU 84
 
 DEF TILE_INCORRECT EQU 0
 DEF TILE_WRONG_POS EQU 1
@@ -161,9 +161,9 @@ Init:
         ld [SwapsRemaining], a
 
         ;; Set up the bg palette
-        select_bank TilePalettes
-        ld b, TilePalettes.end - TilePalettes
-        ld hl, TilePalettes
+        select_bank BackgroundPalettes
+        ld b, BackgroundPalettes.end - BackgroundPalettes
+        ld hl, BackgroundPalettes
         call LoadBackgroundPalettes
 
         ;; Set up the obj palette
@@ -1228,13 +1228,13 @@ SECTION "Tiles", ROMX
 Tiles:
         ;; first tile empty
         ds 16, $00
-        incbin "tile-tiles.bin"
+        incbin "background-tiles.bin"
         incbin "sprite-tiles.bin"
 .end:
 
 SECTION "Palettes", ROMX
-TilePalettes:
-        incbin "tile-palettes.bin"
+BackgroundPalettes:
+        incbin "background-palettes.bin"
 .end:
 SpritePalettes:
         incbin "sprite-palettes.bin"

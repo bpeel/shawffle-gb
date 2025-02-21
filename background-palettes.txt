@@ -17,3 +17,13 @@ ffffff
 ffffff
 000000
 000000
+
+ffffff
+ffff00
+696900
+000000
+
+ffffff
+a6a7bf
+4f52b6
+090d91

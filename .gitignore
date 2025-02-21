@@ -3,8 +3,8 @@
 /shawffle-map.txt
 /shawffle.sym
 /letter-tiles.bin
-/tile-tiles.bin
-/tile-palettes.bin
+/background-tiles.bin
+/background-palettes.bin
 /sprite-tiles.bin
 /sprite-palettes.bin
 /font.bin
