@@ -1002,7 +1002,7 @@ RemoveSelection:
 
 DecrementSwapsRemaining:
         ld a, [SwapsRemaining]
-        dec a
+        sub a, 1
         daa
         ld [SwapsRemaining], a
         jr z, .too_bad
