@@ -100,16 +100,16 @@ Init:
         ld bc, OamDmaCode.end - OamDmaCode
         call MemCpy
 
-        ;; Set up the cursor sprites
-        select_bank CursorSpritesInit
-        ld de, CursorSpritesInit
+        ;; Set up the sprite templates
+        select_bank SpritesInit
+        ld de, SpritesInit
         ld hl, OamMirror
-        ld bc, CursorSpritesInit.end - CursorSpritesInit
+        ld bc, SpritesInit.end - SpritesInit
         call MemCpy
 
-        ;; clear the OAM mirror
-        ld hl, OamMirror + 4 * 8
-        ld b, (40 - 8) * 4
+        ;; clear the rest of the OAM mirror
+        ld hl, OamMirror + SpritesInit.end - SpritesInit
+        ld b, 40 * 4 - (SpritesInit.end - SpritesInit)
         xor a, a
 .clear_oam_loop:
         ld [hli], a
@@ -1068,8 +1068,8 @@ WordPositions:
         db 2, 6, 10, 14, 18
         db 4, 7, 12, 15, 20
 
-SECTION "CursorSpritesInit", ROMX
-CursorSpritesInit:
+SECTION "SpritesInit", ROMX
+SpritesInit:
         ;; Main cursor
         db BOARD_Y * 8 - CURSOR_Y_OFFSET + 16
         db BOARD_X * 8 - CURSOR_X_OFFSET + 8
