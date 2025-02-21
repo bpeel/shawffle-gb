@@ -66,7 +66,7 @@ DEF BYTES_PER_PUZZLE EQU 48
 DEF TILES_PER_PUZZLE EQU 5 * 3 + 3 * 2
 
 DEF CURSOR_TILE EQU 7
-DEF FIRST_LETTER_TILE EQU 8
+DEF FIRST_LETTER_TILE EQU 72
 
 DEF TILE_INCORRECT EQU 0
 DEF TILE_WRONG_POS EQU 1
@@ -172,6 +172,19 @@ Init:
         ld bc, Tiles.end - Tiles
         ld hl, $8000
         call MemCpy
+
+        ;; Copy the font and expand to 4bpp
+        select_bank Font
+        ld de, Font
+        ld bc, Font.end - Font
+:       ld a, [de]
+        inc de
+        ld [hli], a
+        ld [hli], a
+        dec bc
+        ld a, b
+        or a, c
+        jr nz, :-
 
         ld bc, 0
         call SetPuzzle
@@ -1024,6 +1037,11 @@ OamMirror:
 SECTION "LetterTiles", ROMX
 LetterTiles:
         incbin "letter-tiles.bin"
+
+SECTION "Font", ROMX
+Font:
+        incbin "font.bin"
+.end:
 
 SECTION "Tiles", ROMX
 Tiles:

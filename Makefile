@@ -20,9 +20,9 @@ shawffle.gb: $(OBJS)
 .PHONY: clean all
 
 clean:
-	rm -f $(OBJS) shawffle.gb $(TILE_FILES) $(SPRITE_FILES)
+	rm -f $(OBJS) shawffle.gb $(TILE_FILES) $(SPRITE_FILES) font.bin
 
-main.o: letter-tiles.bin $(TILE_FILES) $(SPRITE_FILES) puzzles.bin
+main.o: letter-tiles.bin $(TILE_FILES) $(SPRITE_FILES) puzzles.bin font.bin
 
 letter-tiles.bin: letter-tiles.png make-binary-letter-tiles.py
 	./make-binary-letter-tiles.py letter-tiles.png letter-tiles.bin
@@ -42,6 +42,12 @@ $(SPRITE_FILES): sprite-tiles.png sprite-palettes.txt
 	--color-curve \
 	--output $@ \
 	--palette sprite-palettes.bin \
+	$<
+
+font.bin: font.png
+	rgbgfx \
+	--depth 1 \
+	--output $@ \
 	$<
 
 all: shawffle.gb
