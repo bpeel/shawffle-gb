@@ -72,6 +72,7 @@ DEF BYTES_PER_PUZZLE EQU 48
 DEF TILES_PER_PUZZLE EQU 5 * 3 + 3 * 2
 
 DEF CURSOR_TILE EQU 7
+DEF STAR_TILE EQU 8
 DEF FIRST_LETTER_TILE EQU 72
 
 DEF TILE_INCORRECT EQU 0
@@ -90,6 +91,7 @@ DEF BOARD_Y EQU 1
 
 DEF CURSOR_SPRITE_NUM EQU 0
 DEF SELECTION_SPRITE_NUM EQU 4
+DEF STAR_SPRITE_NUM EQU 8
 
 DEF MESSAGE_X EQU BOARD_X
 DEF MESSAGE_Y EQU SCRN_Y_B - 1
@@ -100,6 +102,11 @@ DEF SWAPS_REMAINING_Y EQU MESSAGE_Y
 DEF INITIAL_SWAPS EQU 15
 
 DEF MESSAGE_LENGTH EQU 16
+
+DEF FILLED_STAR_PALETTE EQU 2
+DEF EMPTY_STAR_PALETTE EQU 3
+DEF STARS_X EQU BOARD_X * 8 + (5 * 3 * 8) / 2 - (5 * 2 - 1) * 8 / 2
+DEF STARS_Y EQU (MESSAGE_Y - 1) * 8
 
 SECTION "Code", ROM0
 
@@ -1027,8 +1034,34 @@ DecrementSwapsRemaining:
 ShowWinMessage:
         ld a, [SwapsRemaining]
         ;; SwapsRemaining hasn’t been decremented
-        add a, (WinMessages - Messages) / MESSAGE_LENGTH - 1
+        dec a
+        ld c, a
+        add a, (WinMessages - Messages) / MESSAGE_LENGTH
         ld [QueuedMessage], a
+
+        ld b, 5
+        ld hl, OamMirror + (STAR_SPRITE_NUM + 5) * 4 - 1
+        ld d, STARS_X + 4 * 16 + 8
+        ld e, EMPTY_STAR_PALETTE
+.loop:
+        ld a, c
+        cp a, b
+        jr nz, :+
+        ld e, FILLED_STAR_PALETTE
+:       ld [hl], e
+        dec hl
+        ld [hl], STAR_TILE
+        dec hl
+        ld [hl], d
+        dec hl
+        ld a, d
+        sub a, 16
+        ld d, a
+        ld [hl], STARS_Y + 16
+        dec hl
+        dec b
+        jr nz, .loop
+        
         ret
 
 FlushMessage:

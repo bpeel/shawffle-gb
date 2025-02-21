@@ -7,3 +7,13 @@ ffffff
 5c55e2
 150cd5
 000000
+
+ffffff
+ffff00
+696900
+000000
+
+ffffff
+ffffff
+ffffff
+000000

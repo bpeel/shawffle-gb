@@ -1,4 +1,4 @@
-DEF FIRST_FONT_TILE EQU 8
+DEF FIRST_FONT_TILE EQU 9
 
 charmap " ", 0
 charmap "𐑐", FIRST_FONT_TILE + 0
