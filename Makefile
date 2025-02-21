@@ -13,6 +13,7 @@ SPRITE_FILES = \
 
 shawffle.gb: $(OBJS)
 	rgblink -o $@ $^ --map shawffle-map.txt \
+	--sym shawffle.sym \
 	&& rgbfix --color-only -v -p 0xff -m mbc1 $@ \
 	--title Shawffle
 
