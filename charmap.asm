@@ -62,6 +62,6 @@ charmap "9", FIRST_FONT_TILE + 57
 charmap ".", FIRST_FONT_TILE + 58
 charmap ",", FIRST_FONT_TILE + 59
 charmap "-", FIRST_FONT_TILE + 60
-charmap "·", FIRST_FONT_TILE + 61
+charmap "!", FIRST_FONT_TILE + 61
 charmap "’", FIRST_FONT_TILE + 62
 charmap ":", FIRST_FONT_TILE + 63
