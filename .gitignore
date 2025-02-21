@@ -1,6 +1,6 @@
 *.o
 /shawffle.gb
-/shawffle-symbols.txt
+/shawffle-map.txt
 /letter-tiles.bin
 /tile-tiles.bin
 /tile-palettes.bin
