@@ -974,8 +974,11 @@ HandleA:
 
         call InitTileStates
         call FindWrongPositions
-        call DecrementSwapsRemaining
-        jp RemoveSelection
+        call RemoveSelection
+
+        call CheckWin
+        jp nz, DecrementSwapsRemaining
+        jp ShowWinMessage
 
 .set_selection:
         ld a, b
@@ -1019,6 +1022,13 @@ DecrementSwapsRemaining:
         ret
 .one_left:
         queue_message OneSwapLeftMessage
+        ret
+
+ShowWinMessage:
+        ld a, [SwapsRemaining]
+        ;; SwapsRemaining hasn’t been decremented
+        add a, (WinMessages - Messages) / MESSAGE_LENGTH - 1
+        ld [QueuedMessage], a
         ret
 
 FlushMessage:
@@ -1083,6 +1093,19 @@ FlushSwapsRemaining:
         ld b, SadPalettes.end - SadPalettes
         ld hl, SadPalettes
         jp LoadBackgroundPalettes
+
+CheckWin:
+        ;; Check whether the player has put all the tiles in the right
+        ;; place and return the result in the z flag
+        ld b, TILES_PER_PUZZLE
+        ld hl, TileStates
+.loop:
+        ld a, [hli]
+        cp a, TILE_CORRECT
+        ret nz                  ; return if not correct, zero flag is not set
+        dec b
+        jr nz, .loop
+        ret                     ; zero flag is set
 
 TurnOffLcd:     
 	; Do not turn the LCD off outside of VBlank
@@ -1279,3 +1302,10 @@ OneSwapLeftMessage:
         message "1 𐑕𐑢𐑪𐑐 𐑤𐑧𐑓𐑑"
 TooBadMessage:
         message "𐑑𐑵 𐑚𐑨𐑛"
+WinMessages:
+        message "𐑡𐑳𐑕𐑑 𐑥𐑱𐑛 𐑦𐑑!"
+        message "𐑿 𐑛𐑦𐑛 𐑦𐑑!"
+        message "𐑯𐑪𐑑 𐑚𐑨𐑛!"
+        message "𐑝𐑧𐑮𐑦 𐑜𐑫𐑛!"
+        message "𐑧𐑒𐑕𐑩𐑤𐑩𐑯𐑑!"
+        message "𐑐𐑻𐑓𐑦𐑒𐑑!"
