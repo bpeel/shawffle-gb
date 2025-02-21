@@ -143,28 +143,21 @@ Init:
         ld [NewKeys], a
         ld [CursorX], a
         ld [CursorY], a
+        ld a, 1
+        ld [SwapsRemainingQueued], a
         ld a, $ff
         ld [SelectionPos], a
         ld [QueuedSwap], a
         ld [NextPaletteLine], a
         ld [QueuedMessage], a
-        ld a, INITIAL_SWAPS / 10 + "0"
-        ld [SwapsRemainingTiles], a
-        ld a, INITIAL_SWAPS % 10 + "0"
-        ld [SwapsRemainingTiles + 1], a
         ld a, (INITIAL_SWAPS / 10 << 4) | (INITIAL_SWAPS % 10)
         ld [SwapsRemaining], a
 
         ;; Set up the bg palette
         select_bank TilePalettes
-        ld a, BCPSF_AUTOINC
-        ldh [rBCPS], a
         ld b, TilePalettes.end - TilePalettes
         ld hl, TilePalettes
-:       ld a, [hli]
-        ldh [rBCPD], a
-        dec b
-        jr nz, :-
+        call LoadBackgroundPalettes
 
         ;; Set up the obj palette
         ld a, OCPSF_AUTOINC
@@ -264,8 +257,8 @@ MainLoop:
         jr .did_work
 .handled_message:
 
-        ld a, [SwapsRemainingTiles]
-        cp a, $ff
+        ld a, [SwapsRemainingQueued]
+        or a, a
         jr z, .handled_swaps_remaining
         call FlushSwapsRemaining
         jr .did_work
@@ -1016,20 +1009,13 @@ DecrementSwapsRemaining:
         cp a, 1
         jr z, .one_left
 
-        ld b, a
-        swap a
-        and a, $0f
-        jr nz, :+
-        ld a, " " - "0"
-:       add a, "0"
-        ld [SwapsRemainingTiles], a
-        ld a, b
-        and a, $0f
-        add a, "0"
-        ld [SwapsRemainingTiles + 1], a
+        ld a, 1
+        ld [SwapsRemainingQueued], a
         ret
 .too_bad:
         queue_message TooBadMessage
+        ld a, 1
+        ld [SwapsRemainingQueued], a
         ret
 .one_left:
         queue_message OneSwapLeftMessage
@@ -1058,16 +1044,45 @@ FlushMessage:
         ld [QueuedMessage], a
         ret
 
+LoadBackgroundPalettes:
+        ;; hl = address of palettes
+        ;; b = size
+        ld a, BCPSF_AUTOINC
+        ldh [rBCPS], a
+:       ld a, [hli]
+        ldh [rBCPD], a
+        dec b
+        jr nz, :-
+        ret
+
 FlushSwapsRemaining:
         xor a, a
+        ld [SwapsRemainingQueued], a
+        ld a, [SwapsRemaining]
+        or a, a
+        jr z, .game_over
+
+        ld b, a
+        xor a, a
         ldh [rVBK], a
-        ld a, [SwapsRemainingTiles]
+        ld a, b
+        swap a
+        and a, $0f
+        jr nz, :+
+        ld a, " " - "0"
+:       add a, "0"
         ld [_SCRN0 + SWAPS_REMAINING_Y * SCRN_VX_B + SWAPS_REMAINING_X], a
-        ld a, [SwapsRemainingTiles + 1]
+        ld a, b
+        and a, $0f
+        add a, "0"
         ld [_SCRN0 + SWAPS_REMAINING_Y * SCRN_VX_B + SWAPS_REMAINING_X + 1], a
-        ld a, $ff
-        ld [SwapsRemainingTiles], a
         ret
+
+.game_over:
+        select_bank SadPalettes
+        ld b, SadPalettes.end - SadPalettes
+        ld hl, SadPalettes
+        jp LoadBackgroundPalettes
 
 TurnOffLcd:     
 	; Do not turn the LCD off outside of VBlank
@@ -1128,9 +1143,10 @@ SelectionPos:   db              ; tile index or $ff if not set
 QueuedSwap:     ds 2            ; swap to do during vblank or $ff if none
 QueuedMessage:  db
 NextPaletteLine: db
-        ;; Tiles to set for the remaining swaps display or $ff if it’s
-        ;; up to date
-SwapsRemainingTiles:    ds 2
+        ;; If non-zero then we need to update the swaps remaining
+        ;; during vblank, either by updating the number or by setting
+        ;; the palette to sad colours.
+SwapsRemainingQueued:    db
 SwapsRemaining: db              ; coded in BCD
 
 SECTION "GameState", WRAM0, ALIGN[BITWIDTH(TILES_PER_PUZZLE * 3 - 1)]
@@ -1166,6 +1182,20 @@ TilePalettes:
 .end:
 SpritePalettes:
         incbin "sprite-palettes.bin"
+.end:
+
+SECTION "SadPalettes", ROMX
+SadPalettes:
+        dw 15 * %0000100001000010
+        dw 12 * %0000100001000010
+        dw 12 * %0000100001000010
+        dw 15 * %0000100001000010
+        REPT 2
+        dw 15 * %0000100001000010
+        dw 0 * %0000100001000010
+        dw 0 * %0000100001000010
+        dw 15 * %0000100001000010
+        ENDR
 .end:
 
 SECTION "Puzzles", ROMX
