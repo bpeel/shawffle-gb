@@ -681,8 +681,7 @@ SetTilePalettesForRow:
         sla a
         add a, b                ; a = y * 5
         ld c, b
-        sra c
-        sla c                   ; mask out bottom bit of c
+        res 0, c                ; mask out bottom bit of c
         sub a, c                ; a -= 2 * (y / 2) to compensate for gaps
         ld d, HIGH(TileStates)
         add a, LOW(TileStates)
