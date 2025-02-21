@@ -57,6 +57,11 @@ MACRO update_cursor_sprites
         ld [OamMirror + ((\1) + 3) * 4], a
 ENDM
 
+MACRO queue_message
+        ld a, (\1 - Messages) / MESSAGE_LENGTH
+        ld [QueuedMessage], a
+ENDM
+
         ;; Offset from TileTiles to the three tiles that form the
         ;; background of a letter
 DEF LETTER_TEMPLATE_OFFSET EQU 16 * 4
@@ -86,10 +91,15 @@ DEF BOARD_Y EQU 1
 DEF CURSOR_SPRITE_NUM EQU 0
 DEF SELECTION_SPRITE_NUM EQU 4
 
-DEF SWAPS_REMAINING_X EQU BOARD_X + 1
-DEF SWAPS_REMAINING_Y EQU SCRN_Y_B - 1
+DEF MESSAGE_X EQU BOARD_X
+DEF MESSAGE_Y EQU SCRN_Y_B - 1
+
+DEF SWAPS_REMAINING_X EQU MESSAGE_X + 1
+DEF SWAPS_REMAINING_Y EQU MESSAGE_Y
 
 DEF INITIAL_SWAPS EQU 15
+
+DEF MESSAGE_LENGTH EQU 16
 
 SECTION "Code", ROM0
 
@@ -137,6 +147,7 @@ Init:
         ld [SelectionPos], a
         ld [QueuedSwap], a
         ld [NextPaletteLine], a
+        ld [QueuedMessage], a
         ld a, INITIAL_SWAPS / 10 + "0"
         ld [SwapsRemainingTiles], a
         ld a, INITIAL_SWAPS % 10 + "0"
@@ -229,14 +240,6 @@ MainLoop:
         ld hl, FrameCount
         inc [hl]
 
-        ;; Update the remaining swaps
-        xor a, a
-        ldh [rVBK], a
-        ld a, [SwapsRemainingTiles]
-        ld [_SCRN0 + SWAPS_REMAINING_Y * SCRN_VX_B + SWAPS_REMAINING_X], a
-        ld a, [SwapsRemainingTiles + 1]
-        ld [_SCRN0 + SWAPS_REMAINING_Y * SCRN_VX_B + SWAPS_REMAINING_X + 1], a
-
         ld a, [QueuedSwap]
         cp a, $ff
         jr z, .handled_swap
@@ -252,7 +255,21 @@ MainLoop:
         dec a
         call SetTilePalettesForRow
         jr .did_work
-.handled_palettes:      
+.handled_palettes:
+
+        ld a, [QueuedMessage]
+        cp a, $ff
+        jr z, .handled_message
+        call FlushMessage
+        jr .did_work
+.handled_message:
+
+        ld a, [SwapsRemainingTiles]
+        cp a, $ff
+        jr z, .handled_swaps_remaining
+        call FlushSwapsRemaining
+        jr .did_work
+.handled_swaps_remaining:
 
 .did_work:       
         call UpdateKeys
@@ -995,6 +1012,10 @@ DecrementSwapsRemaining:
         dec a
         daa
         ld [SwapsRemaining], a
+        jr z, .too_bad
+        cp a, 1
+        jr z, .one_left
+
         ld b, a
         swap a
         and a, $0f
@@ -1006,6 +1027,46 @@ DecrementSwapsRemaining:
         and a, $0f
         add a, "0"
         ld [SwapsRemainingTiles + 1], a
+        ret
+.too_bad:
+        queue_message TooBadMessage
+        ret
+.one_left:
+        queue_message OneSwapLeftMessage
+        ret
+
+FlushMessage:
+        xor a, a
+        ldh [rVBK], a
+        ld a, [QueuedMessage]
+        assert MESSAGE_LENGTH == 16
+        swap a                  ; multiply a by 16
+        ld h, HIGH(Messages)
+        add a, LOW(Messages)
+        ld l, a
+        jr nc, :+
+        inc h
+:       ld de, _SCRN0 + MESSAGE_Y * SCRN_VY_B + MESSAGE_X
+        ld c, MESSAGE_LENGTH
+:       ld a, [hli]
+        ld [de], a
+        inc de
+        dec c
+        jr nz, :-
+
+        ld a, $ff
+        ld [QueuedMessage], a
+        ret
+
+FlushSwapsRemaining:
+        xor a, a
+        ldh [rVBK], a
+        ld a, [SwapsRemainingTiles]
+        ld [_SCRN0 + SWAPS_REMAINING_Y * SCRN_VX_B + SWAPS_REMAINING_X], a
+        ld a, [SwapsRemainingTiles + 1]
+        ld [_SCRN0 + SWAPS_REMAINING_Y * SCRN_VX_B + SWAPS_REMAINING_X + 1], a
+        ld a, $ff
+        ld [SwapsRemainingTiles], a
         ret
 
 TurnOffLcd:     
@@ -1065,8 +1126,11 @@ CursorX:        db
 CursorY:        db
 SelectionPos:   db              ; tile index or $ff if not set
 QueuedSwap:     ds 2            ; swap to do during vblank or $ff if none
+QueuedMessage:  db
 NextPaletteLine: db
-SwapsRemainingTiles:    ds 2    ; Tiles to set for the remaining swaps display
+        ;; Tiles to set for the remaining swaps display or $ff if it’s
+        ;; up to date
+SwapsRemainingTiles:    ds 2
 SwapsRemaining: db              ; coded in BCD
 
 SECTION "GameState", WRAM0, ALIGN[BITWIDTH(TILES_PER_PUZZLE * 3 - 1)]
@@ -1171,3 +1235,17 @@ SpritesInit:
         db CURSOR_TILE
         db OAMF_XFLIP | OAMF_YFLIP | 1
 .end:   
+
+SECTION "Messages", ROMX
+
+        MACRO message
+        ds (15 - STRLEN(\1)) / 2, " "
+        db \1
+        ds MESSAGE_LENGTH - (15 - STRLEN(\1)) / 2 - STRLEN(\1), " "
+        ENDM
+
+Messages:
+OneSwapLeftMessage:
+        message "1 𐑕𐑢𐑪𐑐 𐑤𐑧𐑓𐑑"
+TooBadMessage:
+        message "𐑑𐑵 𐑚𐑨𐑛"
