@@ -322,21 +322,18 @@ LoadPuzzle:
         ;; Fills PuzzleLetters and TilePositions with the puzzle data
         ;; bc = puzzle number
         ;; get puzzle number * 48 into de (= num * 32 + num * 16)
+        ;; de = bc * 16
         ld d, b
         ld e, c
-        ;; de = bc * 32
-        REPT 5
+        REPT 4
         sla e
         rl d
         ENDR
-        ld h, b
-        ld a, c
-        ;; ha = b * 16
-        REPT 4
-        sla a
-        rl h
-        ENDR
-        add a, e
+        ld h, d
+        ld a, e                 ; store bc * 16 in ha
+        sla e
+        rl d                    ; de = bc * 32
+        add a, e                ; add the two multiplications to get bc * 48
         ld e, a
         ld a, d
         adc h
