@@ -894,9 +894,31 @@ DecrementSwapsRemaining:
 
 ShowWinMessage:
         ld a, [SwapsRemaining]
-        ;; SwapsRemaining hasn’t been decremented
-        dec a
+        ;; SwapsRemaining hasn’t been decremented, so it is the same
+        ;; as the score value
         ld c, a
+
+        ;; get the old score
+        select_sram_bank LevelStars
+        enable_sram
+        ld hl, CurrentPuzzle
+        ld a, LOW(LevelStars)
+        add a, [hl]
+        ld e, a
+        inc hl
+        ld a, HIGH(LevelStars)
+        adc a, [hl]
+        ld d, a
+        ld a, [de]
+        ;; is the new score better?
+        cp a, c
+        jr nc, :+
+        ld a, c
+        ld [de], a
+:       disable_sram
+
+        dec c                   ; get the number of stars (score-1)
+        ld a, c
         add a, (WinMessages - Messages) / MESSAGE_LENGTH
         ld [QueuedMessage], a
 
