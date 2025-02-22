@@ -290,6 +290,8 @@ DrawInitialScreen:
         cp a, $20
         jr c, .loop
 
+        disable_sram
+
         ret
 
         
