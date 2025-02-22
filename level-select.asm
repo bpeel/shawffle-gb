@@ -318,7 +318,3 @@ StarPatterns:
 
 SECTION "LevelSelectVariables", WRAM0
 NextWXValue:    db              ; the value to set rWX to in the stat int
-
-SECTION "LevelStars", SRAM
-LevelStars::
-        ds N_PUZZLES
