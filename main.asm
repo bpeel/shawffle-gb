@@ -1,4 +1,5 @@
 INCLUDE "hardware.inc"
+INCLUDE "utils.inc"
 
 SECTION "Header", ROM0[$0000]
 
@@ -26,6 +27,27 @@ Init:
         ld bc, OamDmaCode.end - OamDmaCode
         call MemCpy
 
+        select_bank Tiles
+        xor a, a
+        ldh [rVBK], a
+        ld de, Tiles
+        ld bc, Tiles.end - Tiles
+        ld hl, $8000
+        call MemCpy
+
+        ;; Copy the font and expand to 4bpp
+        select_bank Font
+        ld de, Font
+        ld bc, Font.end - Font
+:       ld a, [de]
+        inc de
+        ld [hli], a
+        ld [hli], a
+        dec bc
+        ld a, b
+        or a, c
+        jr nz, :-
+
         jp Game
 
 Vblank:
@@ -37,3 +59,8 @@ Vblank:
         ld [VblankOccured], a
         pop af
         reti
+
+SECTION "Font", ROMX
+Font:
+        incbin "font.bin"
+.end:

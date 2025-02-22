@@ -1,6 +1,7 @@
 INCLUDE "hardware.inc"
 INCLUDE "charmap.inc"
 INCLUDE "utils.inc"
+INCLUDE "globals.inc"
 
 MACRO add_constant_to_de
         ld a, LOW(\1)
@@ -55,10 +56,6 @@ DEF PUZZLES_PER_BANK EQU 341
 DEF BYTES_PER_PUZZLE EQU 48
 
 DEF TILES_PER_PUZZLE EQU 5 * 3 + 3 * 2
-
-DEF CURSOR_TILE EQU 19
-DEF STAR_TILE EQU 7
-DEF FIRST_LETTER_TILE EQU 84
 
 DEF TILE_INCORRECT EQU 0
 DEF TILE_WRONG_POS EQU 1
@@ -163,27 +160,6 @@ Game::
         ld de, TileMapAttribs
         ld hl, _SCRN0
         call CopyScreenMap
-
-        select_bank Tiles
-        xor a, a
-        ldh [rVBK], a
-        ld de, Tiles
-        ld bc, Tiles.end - Tiles
-        ld hl, $8000
-        call MemCpy
-
-        ;; Copy the font and expand to 4bpp
-        select_bank Font
-        ld de, Font
-        ld bc, Font.end - Font
-:       ld a, [de]
-        inc de
-        ld [hli], a
-        ld [hli], a
-        dec bc
-        ld a, b
-        or a, c
-        jr nz, :-
 
         ld bc, 0
         call SetPuzzle
@@ -1072,19 +1048,6 @@ TileStates:      ds TILES_PER_PUZZLE
 SECTION "LetterTiles", ROMX
 LetterTiles:
         incbin "letter-tiles.bin"
-
-SECTION "Font", ROMX
-Font:
-        incbin "font.bin"
-.end:
-
-SECTION "Tiles", ROMX
-Tiles:
-        ;; first tile empty
-        ds 16, $00
-        incbin "background-tiles.bin"
-        incbin "sprite-tiles.bin"
-.end:
 
 SECTION "Palettes", ROMX
 BackgroundPalettes:
