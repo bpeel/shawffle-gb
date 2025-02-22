@@ -928,6 +928,7 @@ ShowWinMessage:
 FlushMessage:
         xor a, a
         ldh [rVBK], a
+        select_bank Messages
         ld a, [QueuedMessage]
         assert MESSAGE_LENGTH == 16
         swap a                  ; multiply a by 16
