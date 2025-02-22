@@ -1078,6 +1078,9 @@ Puzzles:
 SECTION "Puzzles2", ROMX
 Puzzles2:
         incbin "puzzles.bin", PUZZLES_PER_BANK * BYTES_PER_PUZZLE
+        assert (@ - Puzzles2) / BYTES_PER_PUZZLE \
+               + PUZZLES_PER_BANK \
+               == N_PUZZLES
 .end
 
 SECTION "WordPositions", ROMX
