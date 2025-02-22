@@ -1,7 +1,9 @@
 OBJS = \
 	main.o \
 	tilemap.o \
-	utils.o
+	game.o \
+	utils.o \
+	globals.o
 BACKGROUND_FILES = \
 	background-tiles.bin \
 	background-palettes.bin
@@ -24,13 +26,16 @@ clean:
 	rm -f $(OBJS) shawffle.gb $(BACKGROUND_FILES) $(SPRITE_FILES) font.bin
 
 main.o: \
+	hardware.inc
+game.o: \
 	letter-tiles.bin \
 	$(BACKGROUND_FILES) \
 	$(SPRITE_FILES) \
 	puzzles.bin \
 	font.bin \
 	charmap.inc \
-	utils.inc
+	utils.inc \
+	hardware.inc
 utils.o: \
 	hardware.inc
 tilemap.o: charmap.inc
