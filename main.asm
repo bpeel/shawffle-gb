@@ -1,6 +1,8 @@
 INCLUDE "hardware.inc"
 INCLUDE "utils.inc"
 
+DEF SAVE_STATE_CHECK_SIZE EQU 16
+
 SECTION "Header", ROM0[$0000]
 
         ds $40 - @, 0           ; Skip to vblank interrupt
@@ -33,6 +35,8 @@ Init:
         ld hl, OamDma
         ld bc, OamDmaCode.end - OamDmaCode
         call MemCpy
+
+        call InitialiseSaveState
 
         select_bank Tiles
         xor a, a
@@ -67,7 +71,52 @@ Vblank:
         pop af
         reti
 
+InitialiseSaveState:
+        select_bank SaveStateCheckValue
+        select_sram_bank SaveStateCheck
+        enable_sram
+
+        ld b, SAVE_STATE_CHECK_SIZE
+        ld hl, SaveStateCheck
+        ld de, SaveStateCheckValue
+.checksum_loop:
+        ld a, [de]
+        inc de
+        cp a, [hl]
+        inc hl
+        jr nz, .bad_checksum
+        dec b
+        jr nz, .checksum_loop
+        jr .out                 ; checksum fine, don’t need to clear
+.bad_checksum:
+        ld hl, SaveStateCheck
+        ld de, SaveStateCheckValue
+        ld bc, SAVE_STATE_CHECK_SIZE
+        call MemCpy
+        ;; Clear the remaining memory
+:       xor a, a
+        ld [hli], a
+        ld a, h
+        cp a, HIGH(_SRAM + 8192)
+        jr c, :-
+.out:
+        disable_sram
+        ret
+
 SECTION "Font", ROMX
 Font:
         incbin "font.bin"
 .end:
+
+SECTION "SaveStateCheckValue", ROMX
+SaveStateCheckValue:
+        ;; Ensure we’re encoding the bytes directly and not using a charmap
+        PUSHC
+        NEWCHARMAP ASCII
+        db "Shawffle SRAM :)"
+        POPC
+        assert @ - SaveStateCheckValue == SAVE_STATE_CHECK_SIZE
+
+SECTION "SaveState", SRAM[$A000]
+SaveStateCheck::
+        ds SAVE_STATE_CHECK_SIZE
