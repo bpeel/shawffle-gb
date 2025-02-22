@@ -1,6 +1,7 @@
 OBJS = \
 	main.o \
-	tilemap.o
+	tilemap.o \
+	utils.o
 BACKGROUND_FILES = \
 	background-tiles.bin \
 	background-palettes.bin
@@ -28,7 +29,10 @@ main.o: \
 	$(SPRITE_FILES) \
 	puzzles.bin \
 	font.bin \
-	charmap.inc
+	charmap.inc \
+	utils.inc
+utils.o: \
+	hardware.inc
 tilemap.o: charmap.inc
 
 letter-tiles.bin: letter-tiles.png make-binary-letter-tiles.py

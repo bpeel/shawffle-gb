@@ -1,5 +1,6 @@
 INCLUDE "hardware.inc"
 INCLUDE "charmap.inc"
+INCLUDE "utils.inc"
 
 SECTION "Header", ROM0[$0000]
 
@@ -11,11 +12,6 @@ SECTION "Header", ROM0[$0000]
         jp Init
 
         ds $150 - @, 0          ; Make room for the header
-
-MACRO select_bank
-        ld a, BANK(\1)
-        ld [$2000], a
-ENDM
 
 MACRO add_constant_to_de
         ld a, LOW(\1)
@@ -286,48 +282,6 @@ Vblank:
         ld [VblankOccured], a
         pop af
         reti
-
-OamDmaCode:
-        LOAD "OamDmaCode", HRAM
-OamDma:
-        ld a, HIGH(OamMirror)
-        ldh [rDMA], a   ; start DMA transfer (starts right after instruction)
-        ld a, 40        ; delay for a total of 4×40 = 160 M-cycles
-.wait:
-        dec a           ; 1 M-cycle
-        jr nz, .wait    ; 3 M-cycles
-        ret
-        ENDL
-.end:
-
-MemCpy: 
-	ld a, [de]
-	ld [hli], a
-	inc de
-	dec bc
-	ld a, b
-	or a, c
-	jr nz, MemCpy
-        ret
-
-CopyScreenMap:
-        ld b, 144 / 8
-.line:
-        ld c, 160 / 8
-.tile:
-        ld a, [de]
-        ld [hli], a
-        inc de
-        dec c
-        jr nz, .tile
-        ld a, (256 - 160) / 8
-        add a, l
-        ld l, a
-        jr nc, :+
-        inc h
-:       dec b
-        jr nz, .line
-        ret
 
 SetPuzzle:
         ;; bc = puzzle
@@ -1087,17 +1041,6 @@ FlushMessage:
         ld [QueuedMessage], a
         ret
 
-LoadBackgroundPalettes:
-        ;; hl = address of palettes
-        ;; b = size
-        ld a, BCPSF_AUTOINC
-        ldh [rBCPS], a
-:       ld a, [hli]
-        ldh [rBCPD], a
-        dec b
-        jr nz, :-
-        ret
-
 FlushSwapsRemaining:
         xor a, a
         ld [SwapsRemainingQueued], a
@@ -1139,20 +1082,6 @@ CheckWin:
         dec b
         jr nz, .loop
         ret                     ; zero flag is set
-
-TurnOffLcd:
-        ldh a, [rLCDC]
-        bit BITWIDTH(LCDCF_ON) - 1, a
-        ret z              ; don’t do anything if the screen is already off
-	; Do not turn the LCD off outside of VBlank
-.wait_vblank:
-	ldh a, [rLY]
-	cp 144
-	jr nz, .wait_vblank
-        ; Turn the LCD off
-	xor a, a
-	ldh [rLCDC], a
-        ret
 
 XYToPos:
         ;; Given an x,y position in b,c, return the grid position in
@@ -1212,11 +1141,6 @@ SECTION "GameState", WRAM0, ALIGN[BITWIDTH(TILES_PER_PUZZLE * 3 - 1)]
 PuzzleLetters:  ds TILES_PER_PUZZLE
 TilePositions:  ds TILES_PER_PUZZLE
 TileStates:      ds TILES_PER_PUZZLE
-
-SECTION "OamMirror", WRAM0, ALIGN[8]
-OamMirror:
-        ds 0xa0
-.end:
         
 SECTION "LetterTiles", ROMX
 LetterTiles:
