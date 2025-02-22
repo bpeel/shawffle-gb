@@ -124,6 +124,12 @@ MainLoop:
 
         call PrepareStat
 
+        call UpdateKeys
+
+        ld a, [NewKeys]
+        cp a, $01
+        jp z, Game
+
         jr MainLoop
 
 Stat:
