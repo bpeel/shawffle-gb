@@ -1140,7 +1140,10 @@ CheckWin:
         jr nz, .loop
         ret                     ; zero flag is set
 
-TurnOffLcd:     
+TurnOffLcd:
+        ldh a, [rLCDC]
+        bit BITWIDTH(LCDCF_ON) - 1, a
+        ret z              ; don’t do anything if the screen is already off
 	; Do not turn the LCD off outside of VBlank
 .wait_vblank:
 	ldh a, [rLY]
