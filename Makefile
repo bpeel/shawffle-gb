@@ -4,7 +4,8 @@ OBJS = \
 	game.o \
 	utils.o \
 	globals.o \
-	tiles.o
+	tiles.o \
+	level-select.o
 BACKGROUND_FILES = \
 	background-tiles.bin \
 	background-palettes.bin
@@ -26,7 +27,8 @@ shawffle.gb: $(OBJS)
 .PHONY: clean all
 
 clean:
-	rm -f $(OBJS) shawffle.gb $(BACKGROUND_FILES) $(SPRITE_FILES) font.bin
+	rm -f $(OBJS) shawffle.gb $(BACKGROUND_FILES) $(SPRITE_FILES) font.bin \
+	level-select-palettes.bin
 tiles.o: \
 	background-tiles.bin \
 	sprite-tiles.bin
@@ -43,6 +45,12 @@ game.o: \
 	utils.inc \
 	globals.inc \
 	hardware.inc
+level-select.o: \
+	charmap.inc \
+	utils.inc \
+	globals.inc \
+	hardware.inc \
+	level-select-palettes.bin
 utils.o: \
 	hardware.inc
 tilemap.o: charmap.inc
@@ -72,5 +80,9 @@ font.bin: font.png
 	--depth 1 \
 	--output $@ \
 	$<
+
+
+level-select-palettes.bin: level-select-palettes.txt
+	rgbgfx --palette $@ --color-curve --colors hex:$<
 
 all: shawffle.gb

@@ -59,7 +59,7 @@ Init:
         or a, c
         jr nz, :-
 
-        jp Game
+        jp LevelSelect
 
 Vblank:
         push af
