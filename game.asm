@@ -161,7 +161,10 @@ Game::
         ld hl, _SCRN0
         call CopyScreenMap
 
-        ld bc, 0
+        ld a, [CurrentPuzzle]
+        ld c, a
+        ld a, [CurrentPuzzle + 1]
+        ld b, a
         call SetPuzzle
 
         ;; Clear any pending interrupts

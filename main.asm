@@ -59,6 +59,10 @@ Init:
         or a, c
         jr nz, :-
 
+        xor a, a
+        ld [CurrentPuzzle], a
+        ld [CurrentPuzzle + 1], a
+
         jp LevelSelect
 
 Vblank:

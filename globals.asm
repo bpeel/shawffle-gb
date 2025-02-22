@@ -6,6 +6,7 @@ CurKeys::       db
 NewKeys::       db
 StatJumpInstruction:: db
 StatJumpAddress:: dw
+CurrentPuzzle:: dw
 
 SECTION "LevelStars", SRAM
 LevelStars::
