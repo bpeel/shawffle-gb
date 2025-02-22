@@ -28,8 +28,8 @@ main.o: \
 	$(SPRITE_FILES) \
 	puzzles.bin \
 	font.bin \
-	charmap.asm
-tilemap.o: charmap.asm
+	charmap.inc
+tilemap.o: charmap.inc
 
 letter-tiles.bin: letter-tiles.png make-binary-letter-tiles.py
 	./make-binary-letter-tiles.py letter-tiles.png letter-tiles.bin

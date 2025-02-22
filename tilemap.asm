@@ -1,4 +1,4 @@
-INCLUDE "charmap.asm"
+INCLUDE "charmap.inc"
 
 SECTION "TileMap", ROMX
 TileMap::

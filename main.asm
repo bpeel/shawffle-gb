@@ -1,5 +1,5 @@
 INCLUDE "hardware.inc"
-INCLUDE "charmap.asm"
+INCLUDE "charmap.inc"
 
 SECTION "Header", ROM0[$0000]
 
