@@ -6,6 +6,9 @@ SECTION "Header", ROM0[$0000]
         ds $40 - @, 0           ; Skip to vblank interrupt
         jp Vblank
 
+        ds $48 - @, 0           ; Skip to stat interrupt
+        jp StatJumpInstruction
+
         ds $100 - @, 0          ; Skip to the entry point
         nop
         jp Init
@@ -20,6 +23,10 @@ Init:
 	ldh [rNR52], a
 
         call TurnOffLcd
+
+        ;; Prepare stat interrupt jump instruction
+        ld a, $c3               ; jp n16
+        ld [StatJumpInstruction], a
 
         ;; Set up the OamDma transfer in HRAM
         ld de, OamDmaCode
