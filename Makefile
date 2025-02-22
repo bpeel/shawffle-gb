@@ -18,7 +18,9 @@ SPRITE_FILES = \
 shawffle.gb: $(OBJS)
 	rgblink -o $@ $^ --map shawffle-map.txt \
 	--sym shawffle.sym \
-	&& rgbfix --color-only -v -p 0xff -m mbc1 $@ \
+	&& rgbfix --color-only -v -p 0xff $@ \
+	--mbc-type "MBC1+RAM+BATTERY" \
+	--ram 2 \
 	--title Shawffle
 
 .PHONY: clean all
