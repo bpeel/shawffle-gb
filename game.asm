@@ -168,7 +168,7 @@ Game::
         xor a, a
         ldh [rIF], a
 
-        ;; Enable the vblank and stat interrupts
+        ;; Enable the vblank interrupt
         ld a, IEF_VBLANK
         ldh [rIE], a
         ei
