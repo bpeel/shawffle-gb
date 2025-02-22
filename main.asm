@@ -139,7 +139,6 @@ Init:
         ;; Initialise variables
         xor a, a
         ld [VblankOccured], a
-        ld [FrameCount], a
         ldh [rSCX], a
         ldh [rSCY], a
         ld [CurKeys], a
@@ -233,8 +232,6 @@ MainLoop:
 
         dec a
         ld [VblankOccured], a   ; reset the VBlankOccured flag
-        ld hl, FrameCount
-        inc [hl]
 
         ld a, [QueuedSwap]
         cp a, $ff
@@ -1119,7 +1116,6 @@ PosToXY:
 
 SECTION "Variables", WRAM0
 VblankOccured: db
-FrameCount:      db
 UsedLetters:    db
 CorrectLetters: db
 SearchLetter:   db
