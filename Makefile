@@ -53,7 +53,7 @@ $(BACKGROUND_FILES): background-tiles.png background-palettes.txt
 	--colors hex:background-palettes.txt \
 	--color-curve \
 	--columns \
-	--output $@ \
+	--output background-tiles.bin \
 	--palette background-palettes.bin \
 	$<
 
@@ -61,7 +61,7 @@ $(SPRITE_FILES): sprite-tiles.png sprite-palettes.txt
 	rgbgfx \
 	--colors hex:sprite-palettes.txt \
 	--color-curve \
-	--output $@ \
+	--output sprite-tiles.bin \
 	--palette sprite-palettes.bin \
 	$<
 
