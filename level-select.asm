@@ -681,6 +681,21 @@ endc
         jp UpdateCursorSprites
 
 HandleA:
+        ld a, [CursorY]
+        assert N_LEVELS_PER_ROW == 3
+        ld b, a
+        sla a
+        add a, b                ; a = CursorY * 3
+        ld b, a
+        ld a, [CursorX]
+        add a, b
+        ld b, a
+        ld a, [TargetTopLevel]
+        add a, b
+        ld [CurrentPuzzle], a
+        ld a, [TargetTopLevel + 1]
+        adc a, 0
+        ld [CurrentPuzzle + 1], a
         ;; Pop return address
         pop af
         jp Game
