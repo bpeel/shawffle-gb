@@ -26,6 +26,13 @@ DEF EVEN_STARS_END_TILE EQU 10
 DEF CONTINUE_STARS_TILE EQU 11
 DEF TICK_TILE EQU 18
 
+DEF N_VISIBLE_ROWS EQU SCRN_Y_B - 2
+DEF N_LEVELS_PER_ROW EQU 3
+DEF N_VISIBLE_LEVELS EQU N_VISIBLE_ROWS * N_LEVELS_PER_ROW
+
+DEF TOTAL_N_ROWS EQU (N_PUZZLES + N_LEVELS_PER_ROW - 1) / N_LEVELS_PER_ROW
+DEF MAX_TOP_LEVEL EQU (TOTAL_N_ROWS - N_VISIBLE_ROWS) * N_LEVELS_PER_ROW
+
 DEF BORDER_PALETTE EQU 1
 
 SECTION "LevelSelectCode", ROM0
@@ -55,10 +62,19 @@ LevelSelect::
         xor a, a
         ld [VblankOccured], a
         ldh [rSCX], a
-        ldh [rSCY], a
+        ld [ScrollY], a
         ldh [rWY], a
         ld [CurKeys], a
         ld [NewKeys], a
+        ld [TopLevel], a
+        ld [TopLevel + 1], a
+        ld [TargetTopLevel], a
+        ld [TargetTopLevel + 1], a
+        ld [TopLevelBCD + 1], a
+        ld a, 1
+        ld [TopLevelBCD], a
+        ld a, -8
+        ldh [rSCY], a
 
         ;; Prepare the stat interrupt
         ld a, LOW(Stat)
@@ -124,11 +140,14 @@ MainLoop:
 
         call PrepareStat
 
-        call UpdateKeys
+        call CheckScroll
 
-        ld a, [NewKeys]
-        cp a, $01
-        jp z, Game
+        ld a, [ScrollY]
+        sub a, 8
+        ldh [rSCY], a
+
+        call UpdateKeys
+        call HandleKeyPresses
 
         jr MainLoop
 
@@ -270,6 +289,20 @@ DrawRowInternal:
 
         ret
 
+DrawRow:
+        select_sram_bank LevelStars
+        enable_sram
+        select_bank StarPatterns
+
+        xor a, a
+        ldh [rVBK], a
+
+        call DrawRowInternal
+
+        disable_sram
+
+        ret
+
 DrawInitialScreen:
         select_sram_bank LevelStars
         enable_sram
@@ -278,7 +311,7 @@ DrawInitialScreen:
         xor a, a
         ldh [rVBK], a
 
-        ld hl, _SCRN0 + SCRN_VY_B + 1
+        ld hl, _SCRN0 + 1
         ld bc, 1                ; level number in BCD in bc
         ld de, LevelStars
 
@@ -293,17 +326,219 @@ DrawInitialScreen:
         inc h
 :
         ld a, h
-        cp a, $9a
+        cp a, HIGH(_SCRN0 + N_VISIBLE_ROWS * SCRN_VX_B)
         jr c, .loop
         ld a, l
-        cp a, $20
+        cp a, LOW(_SCRN0 + N_VISIBLE_ROWS * SCRN_VX_B)
         jr c, .loop
 
         disable_sram
 
         ret
 
-        
+DecrementTopLevel:
+        ;; Decrement the two top level variables
+        ld a, [TopLevel]
+        sub a, N_LEVELS_PER_ROW
+        ld [TopLevel], a
+        jr nc, :+
+        ld a, [TopLevel + 1]
+        dec a
+        ld [TopLevel + 1], a
+:       ld a, [TopLevelBCD]
+        sub a, N_LEVELS_PER_ROW
+        daa
+        ld [TopLevelBCD], a
+        ret nc
+        ld a, [TopLevelBCD + 1]
+        sub a, 1
+        daa
+        ld [TopLevelBCD + 1], a
+        ret
+
+NextTopLine:
+        ;; bc = top level for new line in BCD
+        ld a, [TopLevelBCD]
+        sub a, N_LEVELS_PER_ROW
+        daa
+        ld c, a
+        ld a, [TopLevelBCD + 1]
+        sbc a, 0
+        daa
+        ld b, a
+
+        ;; Get a pointer to the level stars for this row in de
+        ld a, [TopLevel]
+        add a, LOW(LevelStars)
+        ld e, a
+        ld a, [TopLevel + 1]
+        adc a, HIGH(LevelStars)
+        ld d, a
+
+        ;; Point hl into the VRAM where we want to write the row
+        ld h, 0
+        ld a, [ScrollY]
+        and a, ~7
+        add a, (SCRN_VY_B - 1) * 8
+        ;; we don’t want to carry into h so that it will wrap around at 32
+        sla a
+        rl h
+        sla a
+        rl h
+        ;; ha = (ScrollY / tile_height - 1) % 32 * 32
+        inc a
+        ld l, a
+        ld a, h
+        add a, HIGH(_SCRN0)
+        ld h, a
+
+        jp DrawRow
+
+IncrementTopLevel:
+        ;; Increment the two top level variables
+        ld a, [TopLevel]
+        add a, N_LEVELS_PER_ROW
+        ld [TopLevel], a
+        jr nc, :+
+        ld a, [TopLevel + 1]
+        inc a
+        ld [TopLevel + 1], a
+:       ld a, [TopLevelBCD]
+        add a, N_LEVELS_PER_ROW
+        daa
+        ld [TopLevelBCD], a
+        ret nc
+        ld a, [TopLevelBCD + 1]
+        add a, 1
+        daa
+        ld [TopLevelBCD + 1], a
+        ret
+
+NextBottomLine:
+        ;; Get the BCD level number of the bottom row into bc
+        ld a, [TopLevelBCD]
+        add a, ((N_VISIBLE_LEVELS / 10) << 4) | (N_VISIBLE_LEVELS % 10)
+        daa
+        ld c, a
+        ld a, [TopLevelBCD + 1]
+        jr nc, :+
+        add a, 1
+        daa
+:       ld b, a
+
+        ;; Get a pointer to the level stars for this row in de
+        ld a, [TopLevel]
+        add a, LOW(N_VISIBLE_LEVELS + LevelStars)
+        ld e, a
+        ld a, [TopLevel + 1]
+        adc a, HIGH(N_VISIBLE_LEVELS + LevelStars)
+        ld d, a
+
+        ;; Point hl into the VRAM where we want to write the row
+        ld h, 0
+        ld a, [ScrollY]
+        and a, ~7
+        add a, N_VISIBLE_ROWS * 8
+        ;; we don’t want to carry into h so that it will wrap around at 32
+        sla a
+        rl h
+        sla a
+        rl h
+        ;; ha = (ScrollY / tile_height + N_VISIBLE_ROWS) % 32 * 32
+        inc a
+        ld l, a
+        ld a, h
+        add a, HIGH(_SCRN0)
+        ld h, a
+
+        jp DrawRow
+
+CheckScroll:
+        ld a, [TopLevel]
+        ld c, a
+        ld a, [TopLevel + 1]
+        ld hl, TargetTopLevel + 1
+        cp a, [hl]
+        jr c, .less
+        jr nz, .greater
+        dec hl
+        ld a, c
+        cp a, [hl]
+        jr c, .less
+        ret z
+.greater:
+        ld a, [ScrollY]
+        and a, 7
+        ;; If the next row of levels is about to become visible then
+        ;; load it in
+        call z, NextTopLine
+        ld a, [ScrollY]
+        dec a
+        ld [ScrollY], a
+        and a, 7
+        ;; If we’ve reached a full tile then decrement the top level
+        and a, 7
+        jp z, DecrementTopLevel
+        ret
+.less:
+        ld a, [ScrollY]
+        and a, 7
+        ;; If the next row of levels is about to become visible then
+        ;; load it in
+        call z, NextBottomLine
+        ld a, [ScrollY]
+        inc a
+        ld [ScrollY], a
+        ;; If we’ve reached a full tile then increment the top level
+        and a, 7
+        jp z, IncrementTopLevel
+        ret
+
+HandleKeyPresses:
+        ld a, [NewKeys]
+        cp a, $40
+        jp z, HandleUp
+        cp a, $80
+        jp z, HandleDown
+        cp a, $01
+        jp z, HandleA
+        ret
+
+HandleUp:
+        ld a, [TargetTopLevel]
+        sub a, N_LEVELS_PER_ROW
+        ld c, a
+        ld a, [TargetTopLevel + 1]
+        sbc a, 0
+        ret c                   ; don’t go below 0
+        ld [TargetTopLevel + 1], a
+        ld a, c
+        ld [TargetTopLevel], a
+        ret
+
+HandleDown:
+        ld a, [TargetTopLevel]
+        add a, N_LEVELS_PER_ROW
+        ld c, a
+        ld a, [TargetTopLevel + 1]
+        adc a, 0
+        cp a, HIGH(MAX_TOP_LEVEL + 1)
+        jr c, .ok
+        ld b, a
+        ld a, c
+        cp a, LOW(MAX_TOP_LEVEL + 1)
+        ret nc
+        ld a, b
+.ok:
+        ld [TargetTopLevel + 1], a
+        ld a, c
+        ld [TargetTopLevel], a
+        ret
+
+HandleA:
+        ;; Pop return address
+        pop af
+        jp Game
 
 SECTION "LevelSelectPalettes", ROMX
 BackgroundPalettes:
@@ -329,3 +564,15 @@ StarPatterns:
 
 SECTION "LevelSelectVariables", WRAM0
 NextWXValue:    db              ; the value to set rWX to in the stat int
+        ;; Level number at the top of the screen in binary (first = 0)
+TopLevel:       dw
+        ;; Same number but plus one and in BCD
+TopLevelBCD:    dw
+        ;; Number that we want TopLevel to be. If this isn’t the same
+        ;; as TopLevel then the screen will slowly scroll in the right
+        ;; direction.
+TargetTopLevel: dw
+        ;; Scroll position of the top of the list. This will be
+        ;; subtracted by 8 and then copied into rSCY to compensate for
+        ;; the top border.
+ScrollY:        db
