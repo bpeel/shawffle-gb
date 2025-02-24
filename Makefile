@@ -28,7 +28,7 @@ shawffle.gb: $(OBJS)
 
 clean:
 	rm -f $(OBJS) shawffle.gb $(BACKGROUND_FILES) $(SPRITE_FILES) font.bin \
-	level-select-palettes.bin
+	level-select-palettes.bin letter-tiles.bin
 tiles.o: \
 	background-tiles.bin \
 	sprite-tiles.bin
