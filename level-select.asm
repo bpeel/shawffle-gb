@@ -33,6 +33,8 @@ DEF N_VISIBLE_LEVELS EQU N_VISIBLE_ROWS * N_LEVELS_PER_ROW
 DEF TOTAL_N_ROWS EQU (N_PUZZLES + N_LEVELS_PER_ROW - 1) / N_LEVELS_PER_ROW
 DEF MAX_TOP_LEVEL EQU (TOTAL_N_ROWS - N_VISIBLE_ROWS) * N_LEVELS_PER_ROW
 
+DEF N_LEVELS_IN_LAST_ROW EQU N_PUZZLES % N_LEVELS_PER_ROW
+
 DEF BORDER_PALETTE EQU 1
 
 SECTION "LevelSelectCode", ROM0
@@ -467,7 +469,27 @@ NextBottomLine:
         add a, HIGH(_SCRN0)
         ld h, a
 
-        jp DrawRow
+        call DrawRow
+
+if N_LEVELS_IN_LAST_ROW != 0
+        ;; Are we drawing the last page?
+        ld a, [TopLevel]
+        cp a, LOW(MAX_TOP_LEVEL - N_LEVELS_PER_ROW)
+        ret nz
+        ld a, [TopLevel + 1]
+        cp a, HIGH(MAX_TOP_LEVEL - N_LEVELS_PER_ROW)
+        ret nz
+        ;; Clear the parts after the last puzzle number
+        ld a, l
+        sub a, (N_LEVELS_PER_ROW - N_LEVELS_IN_LAST_ROW) * 6
+        ld l, a
+        ld c, (N_LEVELS_PER_ROW - N_LEVELS_IN_LAST_ROW) * 6
+        xor a, a
+:       ld [hli], a
+        dec c
+        jr nz, :-
+endc
+        ret
 
 CheckScroll:
         ld a, [TopLevel]
