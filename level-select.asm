@@ -37,6 +37,8 @@ DEF N_LEVELS_IN_LAST_ROW EQU N_PUZZLES % N_LEVELS_PER_ROW
 
 DEF BORDER_PALETTE EQU 1
 
+DEF TITLE_TEXT EQUS "\"𐑕𐑦𐑤𐑧𐑒𐑑 𐑤𐑧𐑝𐑩𐑤\""
+
 SECTION "LevelSelectCode", ROM0
 
 LevelSelect::
@@ -199,22 +201,11 @@ PrepareStat:
 FillWindow:
         xor a, a
         ldh [rVBK], a
-        ;; Fill top row
+        select_bank WindowTileMap
         ld hl, _SCRN1
-        ld a, TOP_LEFT_BORDER_TILE
-        ld [hli], a
-        call .fill_middle
-        ld a, TOP_RIGHT_BORDER_TILE
-        ld [hl], a
-        ;; The next row will get displayed at the bottom of the screen
-        ;; because the window will be disabled in the middle and that
-        ;; seems to stop the hardware from counting window lines
-        ld hl, _SCRN1 + SCRN_VX_B
-        ld a, BOTTOM_LEFT_BORDER_TILE
-        ld [hli], a
-        call .fill_middle
-        ld a, BOTTOM_RIGHT_BORDER_TILE
-        ld [hl], a
+        ld bc, WindowTileMap.end - WindowTileMap
+        ld de, WindowTileMap
+        call MemCpy
 
         ;; Set the palette for the visible tiles
         ld a, 1
@@ -225,13 +216,6 @@ FillWindow:
         ld hl, _SCRN1 + SCRN_VY_B
 .fill_attribute_row:
         ld b, SCRN_X_B
-:       ld [hli], a
-        dec b
-        jr nz, :-
-        ret
-.fill_middle:
-        ld a, HORIZONTAL_BORDER_TILE
-        ld b, SCRN_X_B - 2
 :       ld [hli], a
         dec b
         jr nz, :-
@@ -791,4 +775,20 @@ SpritesInit:
         db 0, 0
         db CURSOR_TILE
         db OAMF_XFLIP | OAMF_YFLIP
+.end:
+
+SECTION "LevelSelectWindowTileMap", ROMX
+WindowTileMap:
+        db TOP_LEFT_BORDER_TILE
+        ds SCRN_X_B / 2 - 1 - STRLEN(TITLE_TEXT) / 2, HORIZONTAL_BORDER_TILE
+        db TITLE_TEXT
+        ds SCRN_X_B / 2 - 1 - (STRLEN(TITLE_TEXT) + 1) / 2, \
+        HORIZONTAL_BORDER_TILE
+        db TOP_RIGHT_BORDER_TILE
+
+        ds SCRN_VX_B - SCRN_X_B
+
+        db BOTTOM_LEFT_BORDER_TILE
+        ds SCRN_X_B - 2, HORIZONTAL_BORDER_TILE
+        db BOTTOM_RIGHT_BORDER_TILE
 .end:
