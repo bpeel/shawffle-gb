@@ -510,29 +510,8 @@ CheckScroll:
         jp z, IncrementTopLevel
         ret
 
-HandleKeyPresses:
-        ld a, [NewKeys]
-        cp a, $40
-        jp z, HandleUp
-        cp a, $80
-        jp z, HandleDown
-        cp a, $01
-        jp z, HandleA
-        ret
-
-HandleUp:
-        ld a, [TargetTopLevel]
-        sub a, N_LEVELS_PER_ROW
-        ld c, a
-        ld a, [TargetTopLevel + 1]
-        sbc a, 0
-        ret c                   ; don’t go below 0
-        ld [TargetTopLevel + 1], a
-        ld a, c
-        ld [TargetTopLevel], a
-        ret
-
-HandleDown:
+ScrollDown:
+        ;; Tries to scroll down. Returns whether it worked in the carry flag
         ld a, [TargetTopLevel]
         add a, N_LEVELS_PER_ROW
         ld c, a
@@ -550,6 +529,96 @@ HandleDown:
         ld a, c
         ld [TargetTopLevel], a
         ret
+
+ScrollUp:
+        ;; Tries to scroll up. Returns whether it worked in the carry flag
+        ld a, [TargetTopLevel]
+        sub a, N_LEVELS_PER_ROW
+        ld c, a
+        ld a, [TargetTopLevel + 1]
+        sbc a, 0
+        jr c, .failed
+        ld [TargetTopLevel + 1], a
+        ld a, c
+        ld [TargetTopLevel], a
+        scf
+        ret
+.failed:
+        ccf
+        ret
+
+HandleKeyPresses:
+        ld a, [NewKeys]
+        cp a, $10
+        jp z, HandleRight
+        cp a, $20
+        jp z, HandleLeft
+        cp a, $40
+        jp z, HandleUp
+        cp a, $80
+        jp z, HandleDown
+        cp a, $01
+        jp z, HandleA
+        ret
+
+HandleRight:
+        ld a, [CursorX]
+        add a, 1
+        cp a, N_LEVELS_PER_ROW
+        jr nc, .next_row
+        ld [CursorX], a
+        jp UpdateCursorSprites
+.next_row:
+        ld a, [CursorY]
+        add a, 1
+        cp a, N_VISIBLE_ROWS
+        jr nc, .scroll_down
+        ld [CursorY], a
+        xor a, a
+        ld [CursorX], a
+        jp UpdateCursorSprites
+.scroll_down:
+        call ScrollDown
+        ret nc
+        xor a, a
+        ld [CursorX], a
+        jp UpdateCursorSprites
+
+HandleLeft:
+        ld a, [CursorX]
+        sub a, 1
+        jr c, .previous_row
+        ld [CursorX], a
+        jp UpdateCursorSprites
+.previous_row:
+        ld a, [CursorY]
+        sub a, 1
+        jr c, .scroll_up
+        ld [CursorY], a
+        ld a, N_LEVELS_PER_ROW - 1
+        ld [CursorX], a
+        jp UpdateCursorSprites
+.scroll_up:
+        call ScrollUp
+        ret nc
+        ld a, N_LEVELS_PER_ROW - 1
+        ld [CursorX], a
+        jp UpdateCursorSprites
+
+HandleUp:
+        ld a, [CursorY]
+        sub a, 1
+        jp c, ScrollUp
+        ld [CursorY], a
+        jp UpdateCursorSprites
+
+HandleDown:
+        ld a, [CursorY]
+        inc a
+        cp a, N_VISIBLE_ROWS
+        jp nc, ScrollDown
+        ld [CursorY], a
+        jp UpdateCursorSprites
 
 HandleA:
         ;; Pop return address
