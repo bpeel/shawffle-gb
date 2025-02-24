@@ -217,19 +217,11 @@ FillSideBars:
         jr nz, .loop
         ret
 
-DrawInitialScreen:
-        select_sram_bank LevelStars
-        enable_sram
-        select_bank StarPatterns
-
-        xor a, a
-        ldh [rVBK], a
-
-        ld hl, _SCRN0 + SCRN_VY_B + 1
-        ld bc, 1                ; level number in BCD in bc
-        ld de, LevelStars
-
-.loop:
+DrawRowInternal:
+        ;; hl = address in VRAM tile map data to write to
+        ;; bc = first level number of row in BCD
+        ;; de = pointer to level stars for first row
+.loop
         ;; Draw the three digits of the level number
         ld a, b
         add a, "0"
@@ -275,6 +267,23 @@ DrawInitialScreen:
         and a, SCRN_VX_B - 1
         cp a, SCRN_X_B - 1
         jr c, .loop
+
+        ret
+
+DrawInitialScreen:
+        select_sram_bank LevelStars
+        enable_sram
+        select_bank StarPatterns
+
+        xor a, a
+        ldh [rVBK], a
+
+        ld hl, _SCRN0 + SCRN_VY_B + 1
+        ld bc, 1                ; level number in BCD in bc
+        ld de, LevelStars
+
+.loop:
+        call DrawRowInternal
 
         ;; Move to next row
         ld a, l
