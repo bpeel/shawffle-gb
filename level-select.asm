@@ -42,9 +42,16 @@ LevelSelect::
 
         call TurnOffLcd
 
-        ;; clear the OAM mirror
+        ;; Set up the sprite templates
+        select_bank SpritesInit
+        ld de, SpritesInit
         ld hl, OamMirror
-        ld b, OAM_COUNT * 4
+        ld bc, SpritesInit.end - SpritesInit
+        call MemCpy
+
+        ;; clear the rest of the OAM mirror
+        ld hl, OamMirror + SpritesInit.end - SpritesInit
+        ld b, 40 * 4 - (SpritesInit.end - SpritesInit)
         xor a, a
 .clear_oam_loop:
         ld [hli], a
@@ -57,6 +64,11 @@ LevelSelect::
         ld b, BackgroundPalettes.end - BackgroundPalettes
         ld hl, BackgroundPalettes
         call LoadBackgroundPalettes
+
+        ;; Set up the obj palette
+        ld b, SpritePalettes.end - SpritePalettes
+        ld hl, SpritePalettes
+        call LoadObjectPalettes
 
         ;; Initialise variables
         xor a, a
@@ -71,10 +83,14 @@ LevelSelect::
         ld [TargetTopLevel], a
         ld [TargetTopLevel + 1], a
         ld [TopLevelBCD + 1], a
+        ld [CursorX], a
+        ld [CursorY], a
         ld a, 1
         ld [TopLevelBCD], a
         ld a, -8
         ldh [rSCY], a
+
+        call UpdateCursorSprites
 
         ;; Prepare the stat interrupt
         ld a, LOW(Stat)
@@ -540,10 +556,44 @@ HandleA:
         pop af
         jp Game
 
+UpdateCursorSprites:
+        ld a, [CursorX]
+        ;; multiply by 48 (= a*32+a*16)
+        sla a
+        sla a
+        sla a
+        sla a
+        ld b, a
+        sla a
+        add a, b
+        add a, 8 + 8 - 4
+        ld [OamMirror + 0 * 4 + 1], a
+        ld [OamMirror + 2 * 4 + 1], a
+        add a, 3 * 8
+        ld [OamMirror + 1 * 4 + 1], a
+        ld [OamMirror + 3 * 4 + 1], a
+
+        ld a, [CursorY]
+        ;; multiply by 8
+        sla a
+        sla a
+        sla a
+        add a, 16 + 8 - 4
+        ld [OamMirror + 0 * 4], a
+        ld [OamMirror + 1 * 4], a
+        add a, 8
+        ld [OamMirror + 2 * 4], a
+        ld [OamMirror + 3 * 4], a
+
+        ret
+
 SECTION "LevelSelectPalettes", ROMX
 BackgroundPalettes:
         incbin "level-select-palettes.bin"
 .end:   
+SpritePalettes:
+        incbin "level-select-sprite-palettes.bin"
+.end:
 
 SECTION "StarPatterns", ROMX
 StarPatterns:   
@@ -576,3 +626,25 @@ TargetTopLevel: dw
         ;; subtracted by 8 and then copied into rSCY to compensate for
         ;; the top border.
 ScrollY:        db
+CursorX:        db
+CursorY:        db
+
+SECTION "LevelSelectSpritesInit", ROMX
+SpritesInit:
+        ;; Main cursor
+        db 0, 0
+        db CURSOR_TILE
+        db 0
+
+        db 0, 0
+        db CURSOR_TILE
+        db OAMF_XFLIP
+
+        db 0, 0
+        db CURSOR_TILE
+        db OAMF_YFLIP
+
+        db 0, 0
+        db CURSOR_TILE
+        db OAMF_XFLIP | OAMF_YFLIP
+.end:
