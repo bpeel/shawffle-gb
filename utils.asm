@@ -26,6 +26,17 @@ LoadBackgroundPalettes::
         jr nz, :-
         ret
 
+LoadObjectPalettes::
+        ;; hl = address of palettes
+        ;; b = size
+        ld a, OCPSF_AUTOINC
+        ldh [rOCPS], a
+:       ld a, [hli]
+        ldh [rOCPD], a
+        dec b
+        jr nz, :-
+        ret
+
 MemCpy::
         ;; de = source
         ;; hl = dest

@@ -131,14 +131,9 @@ Game::
         call LoadBackgroundPalettes
 
         ;; Set up the obj palette
-        ld a, OCPSF_AUTOINC
-        ldh [rOCPS], a
         ld b, SpritePalettes.end - SpritePalettes
         ld hl, SpritePalettes
-:       ld a, [hli]
-        ldh [rOCPD], a
-        dec b
-        jr nz, :-
+        call LoadObjectPalettes
 
         select_bank TileMap
         xor a, a
