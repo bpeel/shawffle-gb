@@ -3,15 +3,6 @@ INCLUDE "charmap.inc"
 INCLUDE "utils.inc"
 INCLUDE "globals.inc"
 
-MACRO add_constant_to_de
-        ld a, LOW(\1)
-        add a, e
-        ld e, a
-        ld a, d
-        adc a, HIGH(\1)
-        ld d, a
-ENDM
-
 MACRO multiply_by_tile_size
         ;; multiply a by 24 (= three tiles, the size of a letter tile)
         sla a

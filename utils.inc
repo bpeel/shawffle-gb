@@ -17,3 +17,12 @@ MACRO disable_sram
         ld a, $00
         ld [$0000], a
 ENDM
+
+MACRO add_constant_to_de
+        ld a, LOW(\1)
+        add a, e
+        ld e, a
+        ld a, d
+        adc a, HIGH(\1)
+        ld d, a
+ENDM
