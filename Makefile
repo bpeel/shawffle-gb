@@ -55,8 +55,8 @@ utils.o: \
 	hardware.inc
 tilemap.o: charmap.inc
 
-letter-tiles.bin: letter-tiles.png make-binary-letter-tiles.py
-	./make-binary-letter-tiles.py letter-tiles.png letter-tiles.bin
+letter-tiles.bin: letter-tiles.png
+	rgbgfx --depth 1 --columns --output $@ $<
 
 $(BACKGROUND_FILES): background-tiles.png background-palettes.txt
 	rgbgfx \
