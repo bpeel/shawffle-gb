@@ -585,9 +585,26 @@ HandleKeyPresses:
 
 HandleRight:
         ld a, [CursorX]
-        add a, 1
-        cp a, N_LEVELS_PER_ROW
+        cp a, N_LEVELS_PER_ROW - 1
         jr nc, .next_row
+if N_LEVELS_IN_LAST_ROW != 0
+        ld b, a
+        ld a, [TargetTopLevel]
+        cp a, LOW(MAX_TOP_LEVEL)
+        jr nz, .inc_ok
+        ld a, [TargetTopLevel + 1]
+        cp a, HIGH(MAX_TOP_LEVEL)
+        jr nz, .inc_ok
+        ld a, [CursorY]
+        cp a, N_VISIBLE_ROWS - 1
+        jr c, .inc_ok
+        ld a, b
+        cp a, N_LEVELS_IN_LAST_ROW - 1
+        ret nc
+.inc_ok:
+        ld a, b
+endc
+        inc a
         ld [CursorX], a
         jp UpdateCursorSprites
 .next_row:
@@ -636,10 +653,31 @@ HandleUp:
 
 HandleDown:
         ld a, [CursorY]
+        cp a, N_VISIBLE_ROWS - 1
+        jr c, .move_ok
+        call ScrollDown
+        ret nc
+        ld a, [CursorY]
+        jr .check_end
+.move_ok:
         inc a
-        cp a, N_VISIBLE_ROWS
-        jp nc, ScrollDown
         ld [CursorY], a
+.check_end:
+if N_LEVELS_IN_LAST_ROW != 0
+        cp a, N_VISIBLE_ROWS - 1
+        jp c, UpdateCursorSprites
+        ld a, [TargetTopLevel]
+        cp a, LOW(MAX_TOP_LEVEL)
+        jp nz, UpdateCursorSprites
+        ld a, [TargetTopLevel + 1]
+        cp a, HIGH(MAX_TOP_LEVEL)
+        jp nz, UpdateCursorSprites
+        ld a, [CursorX]
+        cp a, N_LEVELS_IN_LAST_ROW
+        jp c, UpdateCursorSprites
+        ld a, N_LEVELS_IN_LAST_ROW - 1
+        ld [CursorX], a
+endc
         jp UpdateCursorSprites
 
 HandleA:
