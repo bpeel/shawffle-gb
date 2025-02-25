@@ -74,6 +74,21 @@ CopyScreenMap::
         jr nz, .line
         ret
 
+WaitVBlank::
+        nop
+        halt
+        nop
+
+        ;; Keep waiting until a VBlank interrupt occurs
+        ld a, [VblankOccured]
+        and a, a
+        jr z, WaitVBlank
+
+        dec a
+        ld [VblankOccured], a   ; reset the VBlankOccured flag
+
+        ret
+
         ;; Copied from https://gbdev.io/gb-asm-tutorial/part2/input.html
 UpdateKeys::
         ; Poll half the controller

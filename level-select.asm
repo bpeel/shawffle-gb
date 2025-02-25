@@ -146,17 +146,7 @@ LevelSelect::
         ldh [rLCDC], a
 
 MainLoop:
-        nop
-        halt
-        nop
-
-        ;; Keep waiting until a VBlank interrupt occurs
-        ld a, [VblankOccured]
-        and a, a
-        jr z, MainLoop
-
-        dec a
-        ld [VblankOccured], a   ; reset the VBlankOccured flag
+        call WaitVBlank
 
         call PrepareStat
 
