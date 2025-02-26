@@ -1028,37 +1028,6 @@ PosToXY:
         sla a                   ; a *= 2 to compensate for gaps
         ret
 
-DivideBy10:
-        ;; Divides the 10-bit number in de by 10. Returns quotient in
-        ;; b and remainder in c.
-        ;; de = dividend
-        ;; b = result
-        ;; c = part
-        ;; h = counter
-        ld b, 0
-        ld c, 0
-        bit 1, d                ; copy bit 9 of dividend into low bit of c
-        jr z, :+
-        inc c
-:       ld h, 9                 ; initialise counter
-.loop:
-        sla c                   ; part = (part << 1) | (bit 8 of dividend)
-        bit 0, d                ; copy bit 8 of dividend into low bit of l
-        jr z, :+
-        inc c
-:       sla e
-        rl d                    ; move dividend along by one bit
-        sla b
-        ld a, c
-        cp a, 10                ; is part >= 10?
-        jr c, :+
-        set 0, b
-        sub a, 10
-        ld c, a
-:       dec h
-        jr nz, .loop
-        ret
-
 DrawPuzzleNumber:
         xor a, a
         ldh [rVBK], a
@@ -1068,13 +1037,14 @@ DrawPuzzleNumber:
         ld a, [CurrentPuzzle + 1]
         adc a, 0
         ld d, a
-        call DivideBy10
+        ld l, 10
+        call Divide
         ld a, c
         add a, "0"
         ld [_SCRN0 + PUZZLE_NUMBER_Y * SCRN_VX_B + PUZZLE_NUMBER_X + 2], a
         ld e, b
         ld d, 0
-        call DivideBy10
+        call Divide
         ld a, c
         add a, "0"
         ld [_SCRN0 + PUZZLE_NUMBER_Y * SCRN_VX_B + PUZZLE_NUMBER_X + 1], a

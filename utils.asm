@@ -126,6 +126,37 @@ UpdateKeys::
 .knownret:      
         ret
 
+Divide::
+        ;; Divides the 10-bit number in de by l. Returns quotient in
+        ;; b and remainder in c.
+        ;; de = dividend
+        ;; b = result
+        ;; c = part
+        ;; h = counter
+        ld b, 0
+        ld c, 0
+        bit 1, d                ; copy bit 9 of dividend into low bit of c
+        jr z, :+
+        inc c
+:       ld h, 9                 ; initialise counter
+.loop:
+        sla c                   ; part = (part << 1) | (bit 8 of dividend)
+        bit 0, d                ; copy bit 8 of dividend into low bit of l
+        jr z, :+
+        inc c
+:       sla e
+        rl d                    ; move dividend along by one bit
+        sla b
+        ld a, c
+        cp a, l                 ; is part >= l?
+        jr c, :+
+        set 0, b
+        sub a, l
+        ld c, a
+:       dec h
+        jr nz, .loop
+        ret
+
 OamDmaCode::
         LOAD "OamDmaCode", HRAM
 OamDma::
