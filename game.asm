@@ -110,8 +110,6 @@ Game::
         ld [VblankOccured], a
         ldh [rSCX], a
         ldh [rSCY], a
-        ld [CurKeys], a
-        ld [NewKeys], a
         ld [CursorX], a
         ld [CursorY], a
         ld a, 1

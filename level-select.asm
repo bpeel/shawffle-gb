@@ -80,8 +80,6 @@ LevelSelect::
         ldh [rSCX], a
         ld [ScrollY], a
         ldh [rWY], a
-        ld [CurKeys], a
-        ld [NewKeys], a
         ld [TopLevel], a
         ld [TopLevel + 1], a
         ld [TargetTopLevel], a

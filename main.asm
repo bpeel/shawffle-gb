@@ -36,6 +36,11 @@ Init:
         ld bc, OamDmaCode.end - OamDmaCode
         call MemCpy
 
+        ;; Initialise variables
+        xor a, a
+        ld [CurKeys], a
+        ld [NewKeys], a
+
         call InitialiseSaveState
 
         select_bank Tiles
