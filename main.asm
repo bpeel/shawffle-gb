@@ -1,5 +1,6 @@
 INCLUDE "hardware.inc"
 INCLUDE "utils.inc"
+INCLUDE "globals.inc"
 
 DEF SAVE_STATE_CHECK_SIZE EQU 16
 
@@ -43,9 +44,7 @@ Init:
 
         call InitialiseSaveState
 
-        xor a, a
-        ld [CurrentPuzzle], a
-        ld [CurrentPuzzle + 1], a
+        call FindCurrentLevel
 
         jp TitleScreen
 
@@ -88,6 +87,30 @@ InitialiseSaveState:
         cp a, HIGH(_SRAM + 8192)
         jr c, :-
 .out:
+        disable_sram
+        ret
+
+FindCurrentLevel:
+        enable_sram
+        select_sram_bank LevelStars
+        ld hl, LevelStars
+        ld de, 0
+        ld bc, N_PUZZLES - 1
+        ;; Find the first zero level
+.loop:
+        ld a, [hli]
+        or a, a
+        jr z, .out
+        inc de
+        dec bc
+        ld a, c
+        or a, b
+        jr nz, .loop
+.out:
+        ld a, e
+        ld [CurrentPuzzle], a
+        ld a, d
+        ld [CurrentPuzzle + 1], a
         disable_sram
         ret
 
