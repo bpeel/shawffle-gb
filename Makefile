@@ -5,13 +5,19 @@ OBJS = \
 	utils.o \
 	globals.o \
 	tiles.o \
-	level-select.o
+	level-select.o \
+	title-screen.o
 BACKGROUND_FILES = \
 	background-tiles.bin \
 	background-palettes.bin
 SPRITE_FILES = \
 	sprite-tiles.bin \
 	sprite-palettes.bin
+TITLE_SCREEN_FILES = \
+	title-screen-map.bin \
+	title-screen-palettes.bin \
+	title-screen-tiles.bin \
+	title-screen-attributes.bin
 
 %.o: %.asm
 	rgbasm -o $@ $<
@@ -29,7 +35,7 @@ shawffle.gb: $(OBJS)
 clean:
 	rm -f $(OBJS) shawffle.gb $(BACKGROUND_FILES) $(SPRITE_FILES) font.bin \
 	level-select-palettes.bin level-select-sprite-palettes.bin \
-	letter-tiles.bin
+	letter-tiles.bin $(TITLE_SCREEN_FILES)
 tiles.o: \
 	background-tiles.bin \
 	sprite-tiles.bin \
@@ -58,6 +64,10 @@ level-select.o: \
 utils.o: \
 	hardware.inc
 tilemap.o: charmap.inc
+title-screen.o: \
+	$(TITLE_SCREEN_FILES) \
+	hardware.inc \
+	utils.inc
 
 letter-tiles.bin: letter-tiles.png
 	rgbgfx --depth 1 --columns --output $@ $<
@@ -69,6 +79,17 @@ $(BACKGROUND_FILES): background-tiles.png background-palettes.txt
 	--columns \
 	--output background-tiles.bin \
 	--palette background-palettes.bin \
+	$<
+
+$(TITLE_SCREEN_FILES): title-screen.png
+	rgbgfx \
+	--mirror-tiles \
+	--tilemap title-screen-map.bin \
+	--unique-tiles \
+	--color-curve \
+	--output title-screen-tiles.bin \
+	--palette title-screen-palettes.bin \
+	--attr-map title-screen-attributes.bin \
 	$<
 
 $(SPRITE_FILES): sprite-tiles.png sprite-palettes.txt
