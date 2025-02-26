@@ -74,6 +74,8 @@ LevelSelect::
         ld hl, SpritePalettes
         call LoadObjectPalettes
 
+        call LoadSharedTiles
+
         ;; Initialise variables
         xor a, a
         ld [VblankOccured], a

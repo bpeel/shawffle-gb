@@ -32,10 +32,12 @@ clean:
 	letter-tiles.bin
 tiles.o: \
 	background-tiles.bin \
-	sprite-tiles.bin
+	sprite-tiles.bin \
+	font.bin \
+	utils.inc \
+	hardware.inc
 main.o: \
 	hardware.inc \
-	font.bin \
 	utils.inc
 game.o: \
 	letter-tiles.bin \

@@ -133,6 +133,8 @@ Game::
         ld hl, SpritePalettes
         call LoadObjectPalettes
 
+        call LoadSharedTiles
+
         select_bank TileMap
         xor a, a
         ldh [rVBK], a
