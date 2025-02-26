@@ -82,17 +82,10 @@ LevelSelect::
         ldh [rSCX], a
         ld [ScrollY], a
         ldh [rWY], a
-        ld [TopLevel], a
-        ld [TopLevel + 1], a
-        ld [TargetTopLevel], a
-        ld [TargetTopLevel + 1], a
-        ld [TopLevelBCD + 1], a
-        ld [CursorX], a
-        ld [CursorY], a
-        ld a, 1
-        ld [TopLevelBCD], a
         ld a, -8
         ldh [rSCY], a
+
+        call CalculateCursorPos
 
         call UpdateCursorSprites
 
@@ -304,8 +297,16 @@ DrawInitialScreen:
         ldh [rVBK], a
 
         ld hl, _SCRN0 + 1
-        ld bc, 1                ; level number in BCD in bc
-        ld de, LevelStars
+        ld a, [TopLevelBCD]
+        ld c, a
+        ld a, [TopLevelBCD + 1]
+        ld b, a
+        ld a, [TopLevel]
+        add a, LOW(LevelStars)
+        ld e, a
+        ld a, [TopLevel + 1]
+        adc a, HIGH(LevelStars)
+        ld d, a
 
 .loop:
         call DrawRowInternal
@@ -326,6 +327,24 @@ DrawInitialScreen:
 
         disable_sram
 
+if N_LEVELS_IN_LAST_ROW != 0
+        ;; Are we drawing the last page?
+        ld a, [TopLevel]
+        cp a, LOW(MAX_TOP_LEVEL)
+        ret nz
+        ld a, [TopLevel + 1]
+        cp a, HIGH(MAX_TOP_LEVEL)
+        ret nz
+        ;; Clear the parts after the last puzzle number
+        ld hl, _SCRN0 + \
+        (N_VISIBLE_ROWS - 1) * SCRN_VX_B + \
+        N_LEVELS_IN_LAST_ROW * 6
+        ld c, (N_LEVELS_PER_ROW - N_LEVELS_IN_LAST_ROW) * 6
+        xor a, a
+:       ld [hli], a
+        dec c
+        jr nz, :-
+endc
         ret
 
 DecrementTopLevel:
@@ -702,6 +721,79 @@ UpdateCursorSprites:
         add a, 8
         ld [OamMirror + 2 * 4], a
         ld [OamMirror + 3 * 4], a
+
+        ret
+
+CalculateCursorPos:
+        ld a, [CurrentPuzzle]
+        ld e, a
+        ld a, [CurrentPuzzle + 1]
+        ld d, a
+        ld l, N_LEVELS_PER_ROW
+        call Divide
+        ld a, c
+        ld [CursorX], a         ; CursorX = CurrentPuzzle % N_LEVELS_PER_ROW
+        ld a, [CurrentPuzzle]
+        sub a, c
+        ld e, a
+        ld a, [CurrentPuzzle + 1]
+        sbc a, 0
+        ld d, a                 ; de = CurrentPuzzle rounded down to mul of NLPR
+        push de
+        ld a, e
+        sub a, N_VISIBLE_ROWS / 2 * N_LEVELS_PER_ROW
+        ld e, a
+        ld a, d
+        sbc a, 0
+        ld d, a                 ; de = new top (might be invalid)
+        jr nc, :+               ; is the new top less than zero?
+        ld de, 0                ; set it to zero
+        jr .new_top_ok
+:       cp a, HIGH(MAX_TOP_LEVEL) ; is de > MAX_TOP_LEVEL
+        jr nz, .new_top_ok
+        ld a, e
+        cp a, LOW(MAX_TOP_LEVEL - 1)
+        jr c, .new_top_ok
+        ld de, MAX_TOP_LEVEL    ; if bc is too high then set to MAX_TOP_LEVEL
+.new_top_ok:
+        ld a, e
+        ld [TopLevel], a
+        ld [TargetTopLevel], a
+        ld a, d
+        ld [TopLevel + 1], a
+        ld [TargetTopLevel + 1], a
+        ;; Convert de to BCD
+        inc de
+        ld l, 10
+        call Divide
+        ld a, c
+        ld [TopLevelBCD], a
+        ld d, 0
+        ld e, b
+        call Divide
+        ld a, [TopLevelBCD]
+        swap c
+        or a, c
+        ld [TopLevelBCD], a
+        ld a, b
+        ld [TopLevelBCD + 1], a
+        pop de                  ; get start of row of current puzzle back
+        ;; de -= TopLevel
+        ld a, [TopLevel]
+        ld c, a
+        ld a, e
+        sub c
+        ld e, a
+        ld a, [TopLevel + 1]
+        ld b, a
+        ld a, d
+        sbc b
+        ld d, a
+        ;; divide by 3 to get row number
+        ld l, 3
+        call Divide
+        ld a, b
+        ld [CursorY], a
 
         ret
 
