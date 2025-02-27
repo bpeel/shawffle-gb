@@ -63,7 +63,10 @@ level-select.o: \
 	level-select-sprite-palettes.bin
 utils.o: \
 	hardware.inc
-tilemap.o: charmap.inc
+tilemap.o: \
+	charmap.inc \
+	hardware.inc \
+	globals.inc
 title-screen.o: \
 	$(TITLE_SCREEN_FILES) \
 	hardware.inc \

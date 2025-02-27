@@ -52,7 +52,14 @@ DEF TILE_INCORRECT EQU 0
 DEF TILE_WRONG_POS EQU 1
 DEF TILE_CORRECT EQU 2
 
-DEF GAME_LCDC EQU LCDCF_ON | LCDCF_BG8000 | LCDCF_OBJON | LCDCF_OBJ8
+DEF GAME_LCDC EQU \
+        LCDCF_ON | \
+        LCDCF_BG8000 | \
+        LCDCF_OBJON | \
+        LCDCF_OBJ8 | \
+        LCDCF_BG9800 | \
+        LCDCF_WIN9C00 | \
+        LCDCF_WINON
 
 DEF CURSOR_X_OFFSET EQU 1
 DEF CURSOR_Y_OFFSET EQU 1
@@ -83,6 +90,10 @@ DEF STARS_Y EQU (MESSAGE_Y - 1) * 8
 
 DEF PUZZLE_NUMBER_X EQU 17
 DEF PUZZLE_NUMBER_Y EQU 6
+
+DEF VISIBLE_WINDOW_POS EQU SCRN_Y - 4 * 8
+DEF N_MENU_OPTIONS EQU 3
+DEF MENU_CURSOR_X EQU 3
 
 SECTION "GameCode", ROM0
 
@@ -115,8 +126,11 @@ Game::
         ldh [rSCY], a
         ld [CursorX], a
         ld [CursorY], a
+        ld [WindowVisible], a
+        ld [MenuCursor], a
         ld a, 1
         ld [SwapsRemainingQueued], a
+        ld [MenuCursorDirty], a
         ld a, $ff
         ld [SelectionPos], a
         ld [QueuedSwap], a
@@ -124,6 +138,12 @@ Game::
         ld [QueuedMessage], a
         ld a, (INITIAL_SWAPS / 10 << 4) | (INITIAL_SWAPS % 10)
         ld [SwapsRemaining], a
+        ld a, 7
+        ld [rWX], a
+        ld a, SCRN_Y
+        ldh [rWY], a
+        ld [WindowY], a
+        ldh [rLYC], a
 
         ;; Set up the bg palette
         select_bank BackgroundPalettes
@@ -138,6 +158,7 @@ Game::
 
         call LoadSharedTiles
 
+        ;; Load the background data
         select_bank TileMap
         xor a, a
         ldh [rVBK], a
@@ -150,6 +171,21 @@ Game::
         ld hl, _SCRN0
         call CopyScreenMap
 
+        ;; Load the window data
+        select_bank MenuTileMap
+        xor a, a
+        ldh [rVBK], a
+        ld de, MenuTileMap
+        ld hl, _SCRN1
+        ld b, (MenuTileMap.end - MenuTileMap) / SCRN_X_B
+        call CopyScreenMapRows
+        ld a, 1
+        ldh [rVBK], a
+        ld de, MenuTileAttribs
+        ld hl, _SCRN1
+        ld b, (MenuTileAttribs.end - MenuTileAttribs) / SCRN_X_B
+        call CopyScreenMapRows
+
         call DrawPuzzleNumber
 
         ld a, [CurrentPuzzle]
@@ -158,12 +194,20 @@ Game::
         ld b, a
         call SetPuzzle
 
+        ;; Prepare the stat interrupt
+        ld a, LOW(Stat)
+        ld [StatJumpAddress], a
+        ld a, HIGH(Stat)
+        ld [StatJumpAddress + 1], a
+        ld a, STATF_LYC
+        ldh [rSTAT], a
+
         ;; Clear any pending interrupts
         xor a, a
         ldh [rIF], a
 
-        ;; Enable the vblank interrupt
-        ld a, IEF_VBLANK
+        ;; Enable the vblank and stat interrupts
+        ld a, IEF_VBLANK | IEF_STAT
         ldh [rIE], a
         ei
 
@@ -173,6 +217,12 @@ Game::
 
 MainLoop:
         call WaitVBlank
+
+        ld a, [WindowY]
+        ldh [rWY], a
+        ldh [rLYC], a
+        ld a, GAME_LCDC
+        ldh [rLCDC], a
 
         ld a, [QueuedSwap]
         cp a, $ff
@@ -205,9 +255,17 @@ MainLoop:
         jr .did_work
 .handled_swaps_remaining:
 
+        ld a, [MenuCursorDirty]
+        or a, a
+        jr z, .handled_menu_cursor
+        call UpdateMenuCursor
+        jr .did_work
+.handled_menu_cursor
+
 .did_work:       
         call UpdateKeys
         call HandleKeyPresses
+        call UpdateWindow
 
         jr MainLoop
 
@@ -708,9 +766,16 @@ HandleKeyPresses:
         jp z, HandleA
         cp a, BUTTON_B
         jp z, HandleB
+        cp a, BUTTON_START
+        jp z, HandleStart
+        cp a, BUTTON_SELECT
+        jp z, HandleSelect
         ret
 
 HandleRight:
+        ld a, [WindowVisible]
+        or a, a
+        ret nz
         ld a, [CursorX]
         cp a, 4
         ret nc
@@ -727,6 +792,9 @@ HandleRight:
         jp UpdateCursorSprites
 
 HandleLeft:
+        ld a, [WindowVisible]
+        or a, a
+        ret nz
         ld a, [CursorX]
         or a, a
         ret z
@@ -743,6 +811,9 @@ HandleLeft:
         jp UpdateCursorSprites
 
 HandleUp:
+        ld a, [WindowVisible]
+        or a, a
+        jr nz, .window
         ld a, [CursorY]
         or a, a
         ret z
@@ -758,7 +829,20 @@ HandleUp:
         ld [CursorY], a
         jp UpdateCursorSprites
 
+.window:
+        ld a, [MenuCursor]
+        sub a, 1
+        jr nc, :+
+        ld a, N_MENU_OPTIONS - 1
+:       ld [MenuCursor], a
+        ld a, 1
+        ld [MenuCursorDirty], a
+        ret
+
 HandleDown:
+        ld a, [WindowVisible]
+        or a, a
+        jp nz, NextMenuOption
         ld a, [CursorY]
         cp a, 4
         ret nc
@@ -775,6 +859,10 @@ HandleDown:
         jp UpdateCursorSprites
 
 HandleA:
+        ld a, [WindowVisible]
+        or a, a
+        jp nz, .window
+
         ld a, [SwapsRemaining]
         or a, a
         ret z                   ; don’t allowing swapping if no swaps remain
@@ -835,8 +923,50 @@ HandleA:
         update_cursor_sprites SELECTION_SPRITE_NUM
         ret
 
+.window:
+        ld a, [MenuCursor]
+        or a, a
+        jr z, .continue
+        pop bc                  ; pop the return address
+        cp a, 1
+        jp z, Game              ; Restart the puzzle
+        jp LevelSelect          ; back to puzzle select screen
+.restart:
+        pop af                  ; pop the return address
+.continue:
+        ld [WindowVisible], a   ; set WindowVisible to 0
+        ret
+
 HandleB:
+        ld a, [WindowVisible]
+        or a, a
+        ret nz
         jp RemoveSelection
+
+HandleStart:
+        ld a, [WindowVisible]
+        xor a, 1
+        ld [WindowVisible], a
+        ret z
+        xor a, a
+        ld [MenuCursor], a
+        inc a
+        ld [MenuCursorDirty], a
+        ret
+
+HandleSelect:
+        assert @ - NextMenuOption == 0
+
+NextMenuOption:
+        ld a, [MenuCursor]
+        inc a
+        cp a, N_MENU_OPTIONS
+        jr c, :+
+        ld a, 0                 ; wrap around to the first option
+:       ld [MenuCursor], a
+        ld a, 1
+        ld [MenuCursorDirty], a
+        ret
 
 UpdateCursorSprites:
         update_cursor_sprites CURSOR_SPRITE_NUM
@@ -1053,6 +1183,50 @@ DrawPuzzleNumber:
         ld [_SCRN0 + PUZZLE_NUMBER_Y * SCRN_VX_B + PUZZLE_NUMBER_X], a
         ret
 
+UpdateWindow:
+        ld a, [WindowVisible]
+        or a, a
+        ld a, [WindowY]
+        jr z, .invisible
+        sub a, 2
+        cp a, VISIBLE_WINDOW_POS
+        ret c
+        ld [WindowY], a
+        ret
+.invisible:
+        cp a, SCRN_Y
+        ret nc
+        add a, 2
+        ld [WindowY], a
+        ret
+
+UpdateMenuCursor:
+        xor a, a
+        ldh [rVBK], a
+        ld [MenuCursorDirty], a
+        FOR N, N_MENU_OPTIONS
+        ld [_SCRN1 + (N + 1) * SCRN_VX_B + MENU_CURSOR_X], a
+        ENDR
+        ld h, HIGH(_SCRN1 + 1 * SCRN_VX_B + MENU_CURSOR_X)
+        ld a, [MenuCursor]
+        swap a
+        sla a                   ; a *= 32
+        add a, LOW(_SCRN1 + 1 * SCRN_VX_B + MENU_CURSOR_X)
+        ld l, a
+        jr nc, :+
+        inc h
+:       ld a, MENU_CURSOR_TILE
+        ld [hl], a
+        ret
+
+Stat:
+        push af
+        ;; disable objects when we reach the window
+        ld a, GAME_LCDC & ~LCDCF_OBJON
+        ldh [rLCDC], a
+        pop af
+        reti
+
 SECTION "GameVariables", WRAM0
 UsedLetters:    db
 CorrectLetters: db
@@ -1068,6 +1242,10 @@ NextPaletteLine: db
         ;; the palette to sad colours.
 SwapsRemainingQueued:    db
 SwapsRemaining: db              ; coded in BCD
+WindowY:        db              ; position to set the window to on vblank
+WindowVisible:  db              ; 1 or 0
+MenuCursor:     db
+MenuCursorDirty: db
 
 SECTION "GameState", WRAM0, ALIGN[BITWIDTH(TILES_PER_PUZZLE * 3 - 1)]
 PuzzleLetters:  ds TILES_PER_PUZZLE

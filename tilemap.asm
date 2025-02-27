@@ -1,4 +1,6 @@
 INCLUDE "charmap.inc"
+INCLUDE "hardware.inc"
+INCLUDE "globals.inc"
 
 SECTION "TileMap", ROMX
 TileMap::
@@ -39,3 +41,34 @@ TileMapAttribs::
         db 00,00,00,32,00,00,32,00,00,32,00,00,32,00,00,32,00,00,00,00
         db 00,00,00,00,00,00,00,00,00,00,00,00,00,00,00,00,00,00,00,00
         db 03,03,03,03,03,03,03,03,03,03,03,03,03,03,03,03,03,03,03,03
+
+SECTION "MenuTileMap", ROMX
+MenuTileMap::
+
+        db TOP_LEFT_BORDER_TILE
+        ds SCRN_X_B - 2, HORIZONTAL_BORDER_TILE
+        db TOP_RIGHT_BORDER_TILE
+
+        db VERTICAL_BORDER_TILE
+        db "   𐑒𐑪𐑯𐑑𐑦𐑯𐑿        "
+        db VERTICAL_BORDER_TILE
+
+        db VERTICAL_BORDER_TILE
+        db "   𐑮𐑰𐑕𐑑𐑸𐑑 𐑐𐑳𐑟𐑩𐑤   "
+        db VERTICAL_BORDER_TILE
+
+        db VERTICAL_BORDER_TILE
+        db "   𐑕𐑦𐑤𐑧𐑒𐑑 𐑤𐑧𐑝𐑩𐑤   "
+        db VERTICAL_BORDER_TILE
+.end::
+
+MenuTileAttribs::
+        ds SCRN_X_B, 5
+        REPT 3
+        db 5
+        ds 2, 3
+        db 5
+        ds SCRN_X_B - 5, 3
+        db 5
+        ENDR
+.end::
