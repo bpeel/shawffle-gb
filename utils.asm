@@ -58,14 +58,14 @@ CopyScreenMapRows::
         ;; hl = dest
         ;; b = number of rows
 .line:
-        ld c, 160 / 8
+        ld c, SCRN_X_B
 .tile:
         ld a, [de]
         ld [hli], a
         inc de
         dec c
         jr nz, .tile
-        ld a, (256 - 160) / 8
+        ld a, SCRN_VX_B - SCRN_X_B
         add a, l
         ld l, a
         jr nc, :+
