@@ -50,13 +50,13 @@ MemCpy::
 	jr nz, MemCpy
         ret
 
-CopyScreenMap::
-        ;; Copy one screen’s worth of tile map or attribute data. The
-        ;; data is packed so that only 20 bytes are stored per row of
-        ;; tiles instead of the full 32 for the large scrollable area
+CopyScreenMapRows::
+        ;; Copy rows for a tile map or attribute data. The data is
+        ;; packed so that only 20 bytes are stored per row of tiles
+        ;; instead of the full 32 for the large scrollable area
         ;; de = source
         ;; hl = dest
-        ld b, 144 / 8
+        ;; b = number of rows
 .line:
         ld c, 160 / 8
 .tile:
@@ -73,6 +73,15 @@ CopyScreenMap::
 :       dec b
         jr nz, .line
         ret
+
+CopyScreenMap::
+        ;; Copy one screen’s worth of tile map or attribute data. The
+        ;; data is packed so that only 20 bytes are stored per row of
+        ;; tiles instead of the full 32 for the large scrollable area
+        ;; de = source
+        ;; hl = dest
+        ld b, SCRN_Y_B
+        jp CopyScreenMapRows
 
 WaitVBlank::
         nop
