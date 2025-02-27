@@ -861,7 +861,7 @@ HandleDown:
 HandleA:
         ld a, [WindowVisible]
         or a, a
-        jp nz, .window
+        jp nz, ActivateMenuOption
 
         ld a, [SwapsRemaining]
         or a, a
@@ -923,20 +923,6 @@ HandleA:
         update_cursor_sprites SELECTION_SPRITE_NUM
         ret
 
-.window:
-        ld a, [MenuCursor]
-        or a, a
-        jr z, .continue
-        pop bc                  ; pop the return address
-        cp a, 1
-        jp z, Game              ; Restart the puzzle
-        jp LevelSelect          ; back to puzzle select screen
-.restart:
-        pop af                  ; pop the return address
-.continue:
-        ld [WindowVisible], a   ; set WindowVisible to 0
-        ret
-
 HandleB:
         ld a, [WindowVisible]
         or a, a
@@ -945,13 +931,12 @@ HandleB:
 
 HandleStart:
         ld a, [WindowVisible]
-        xor a, 1
-        ld [WindowVisible], a
-        ret z
-        xor a, a
+        or a, a
+        jp nz, ActivateMenuOption
         ld [MenuCursor], a
         inc a
         ld [MenuCursorDirty], a
+        ld [WindowVisible], a
         ret
 
 HandleSelect:
@@ -966,6 +951,20 @@ NextMenuOption:
 :       ld [MenuCursor], a
         ld a, 1
         ld [MenuCursorDirty], a
+        ret
+
+ActivateMenuOption:
+        ld a, [MenuCursor]
+        or a, a
+        jr z, .continue
+        pop bc                  ; pop the return address
+        cp a, 1
+        jp z, Game              ; Restart the puzzle
+        jp LevelSelect          ; back to puzzle select screen
+.restart:
+        pop af                  ; pop the return address
+.continue:
+        ld [WindowVisible], a   ; set WindowVisible to 0
         ret
 
 UpdateCursorSprites:
