@@ -1,5 +1,6 @@
 INCLUDE "hardware.inc"
 INCLUDE "utils.inc"
+INCLUDE "globals.inc"
 
 DEF TITLE_SCREEN_LCDC EQU \
         LCDCF_ON | \
@@ -67,7 +68,7 @@ MainLoop:
         call UpdateKeys
 
         ld a, [NewKeys]
-        and a, $09              ; is start or a pressed?
+        and a, BUTTON_A | BUTTON_START ; is start or a pressed?
         jp nz, LevelSelect
 
         jr MainLoop

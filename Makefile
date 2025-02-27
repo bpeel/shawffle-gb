@@ -67,7 +67,8 @@ tilemap.o: charmap.inc
 title-screen.o: \
 	$(TITLE_SCREEN_FILES) \
 	hardware.inc \
-	utils.inc
+	utils.inc \
+	globals.inc
 
 letter-tiles.bin: letter-tiles.png
 	rgbgfx --depth 1 --columns --output $@ $<

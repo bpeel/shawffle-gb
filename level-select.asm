@@ -556,15 +556,15 @@ ScrollUp:
 
 HandleKeyPresses:
         ld a, [NewKeys]
-        cp a, $10
+        cp a, BUTTON_RIGHT
         jp z, HandleRight
-        cp a, $20
+        cp a, BUTTON_LEFT
         jp z, HandleLeft
-        cp a, $40
+        cp a, BUTTON_UP
         jp z, HandleUp
-        cp a, $80
+        cp a, BUTTON_DOWN
         jp z, HandleDown
-        cp a, $01
+        cp a, BUTTON_A
         jp z, HandleA
         ret
 
