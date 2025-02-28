@@ -21,6 +21,9 @@ SECTION "Header", ROM0[$0000]
 SECTION "Init", ROM0
 
 Init:
+        ;; Save a to detect GB type later
+        push af
+
 	; Shut down audio circuitry
 	xor a, a
 	ldh [rNR52], a
@@ -36,6 +39,11 @@ Init:
         ld hl, OamDma
         ld bc, OamDmaCode.end - OamDmaCode
         call MemCpy
+
+        ;; Are we running on a CGB?
+        pop af
+        cp a, BOOTUP_A_CGB
+        jp nz, WrongGameBoy
 
         ;; Initialise variables
         xor a, a

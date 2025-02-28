@@ -6,7 +6,8 @@ OBJS = \
 	globals.o \
 	tiles.o \
 	level-select.o \
-	title-screen.o
+	title-screen.o \
+	wrong-game-boy.o
 BACKGROUND_FILES = \
 	background-tiles.bin \
 	background-palettes.bin
@@ -72,6 +73,10 @@ title-screen.o: \
 	hardware.inc \
 	utils.inc \
 	globals.inc
+wrong-game-boy.o: \
+	hardware.inc \
+	utils.inc \
+	charmap.inc
 
 letter-tiles.bin: letter-tiles.png
 	rgbgfx --depth 1 --columns --output $@ $<
