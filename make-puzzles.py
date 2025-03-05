@@ -1,23 +1,35 @@
 #!/usr/bin/python3
 
 import sys
+import re
 
 PUZZLE_SIZE = 48
-
-FIRST_LETTER = ord("𐑐")
-N_LETTERS = 48
 
 N_TILES = 5 * 3 + 3 * 2
 N_SPACES = 5 * 5
 
 PADDING = bytes([0] * (PUZZLE_SIZE - N_TILES * 2))
 
+CHAR_RE = re.compile(r'^\s*charmap\s+"(.)"\s*,\s*FIRST_FONT_TILE\s*\+\s*'
+                     r'([0-9]+)')
+
+charmap = {}
+
+with open("charmap.inc", "r", encoding="utf-8") as f:
+    for line in f:
+        md = CHAR_RE.match(line)
+
+        if md is None:
+            continue
+
+        charmap[md.group(1)] = int(md.group(2))
+
 with open("puzzles.bin", "wb") as f:
     for (line_num, line) in enumerate(sys.stdin):
         for ch in line[0:N_TILES]:
-            letter_num = ord(ch) - FIRST_LETTER
-
-            if letter_num < 0 or letter_num >= N_LETTERS:
+            try:
+                letter_num = charmap[ch]
+            except KeyError:
                 print(f"invalid letter {ch} on line {line_num + 1}",
                       file=sys.stderr)
                 sys.exit(1)
