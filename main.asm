@@ -21,6 +21,9 @@ SECTION "Header", ROM0[$0000]
 SECTION "Init", ROM0
 
 Init:
+        ;; Move the stack to WRAM
+        ld sp, Stack.end
+
         ;; Save a to detect GB type later
         push af
 
@@ -134,3 +137,8 @@ SaveStateCheckValue:
 SECTION "SaveState", SRAM[$A000]
 SaveStateCheck::
         ds SAVE_STATE_CHECK_SIZE
+
+SECTION "Stack", WRAM0
+Stack:
+        ds 256
+.end:
